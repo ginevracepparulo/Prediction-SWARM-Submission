@@ -56,14 +56,55 @@ DATURA_API_URL = "https://apis.datura.ai/twitter"
 with st.sidebar:
     st.header("API Configuration")
     selected_model = st.selectbox("Model", [MODEL_NAME], index=0)
-    openai_key = st.text_input("OpenAI API Key", value=OPEN_AI_KEY)
-    datura_key = st.text_input("Datura API Key", value=DATURA_API_KEY)
-    news_api_key = st.text_input("News API Token", value=NEWS_API_TOKEN)
-    google_api_key = st.text_input("Google API Key", value=GOOGLE_API_KEY)
-    google_cse_id = st.text_input("Google CSE ID", value=GOOGLE_CSE_ID)
+    
+    # Get an OpenAI API Key before continuing
+    # OpenAI API Key
+    if "OPENAI_AI_KEY" in st.secrets:
+        OPENAI_AI_KEY = st.secrets["OPENAI_AI_KEY"]
+    else:
+        OPENAI_AI_KEY = st.sidebar.text_input("OpenAI API Key", type="password")
+    if not OPENAI_AI_KEY:
+        st.info("Enter an OpenAI API Key to continue")
+        st.stop()
+
+    # Datura API Key
+    if "DATURA_API_KEY" in st.secrets:
+        DATURA_API_KEY = st.secrets["DATURA_API_KEY"]
+    else:
+        DATURA_API_KEY = st.sidebar.text_input("Datura API Key", type="password")
+    if not DATURA_API_KEY:
+        st.info("Enter a Datura API Key to continue")
+        st.stop()
+
+    # News API Token
+    if "NEWS_API_TOKEN" in st.secrets:
+        NEWS_API_TOKEN = st.secrets["NEWS_API_TOKEN"]
+    else:
+        NEWS_API_TOKEN = st.sidebar.text_input("News API Token", type="password")
+    if not NEWS_API_TOKEN:
+        st.info("Enter a News API Token to continue")
+        st.stop()
+
+    # Google API Key
+    if "GOOGLE_API_KEY" in st.secrets:
+        GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    else:
+        GOOGLE_API_KEY = st.sidebar.text_input("Google API Key", type="password")
+    if not GOOGLE_API_KEY:
+        st.info("Enter a Google API Key to continue")
+        st.stop()
+
+    # Google CSE ID
+    if "GOOGLE_CSE_ID" in st.secrets:
+        GOOGLE_CSE_ID = st.secrets["GOOGLE_CSE_ID"]
+    else:
+        GOOGLE_CSE_ID = st.sidebar.text_input("Google CSE ID")
+    if not GOOGLE_CSE_ID:
+        st.info("Enter a Google CSE ID to continue")
+        st.stop()
 
 # Check for valid API Key & Model
-if not openai_key or not selected_model:
+if not OPEN_AI_KEY or not selected_model:
     st.warning("You must provide a valid OpenAI API key and select a model!", icon="⚠️")
     st.stop()
 
