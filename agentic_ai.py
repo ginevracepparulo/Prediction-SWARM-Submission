@@ -22,29 +22,23 @@ from autogen_agentchat.messages import StructuredMessage, TextMessage
 from autogen_agentchat.ui import Console
 from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+
 # Add this near the top of your script
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
 
 # API Keys - Replace with your actual keys
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
-GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY", "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")
-GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY", "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")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY")
+GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY")
 
-DATURA_API_KEY = os.environ.get("DATURA_API_KEY", "dt_$X6oACKtNOE_2RL984Dg-C8Ds6HZmsQLA4N7ez3NysVg")
-NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN", "drAk0dGvkyZWSoutZe1sRgfY81HpTYiwERgrSgsw")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBo8-CKyb3IzZbRzx685TqDi9EutAg7FkE")
-GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID", "64c807de4a9d1425d")
-# 
-# # Initialize Groq clients
-# groq_client = Groq(api_key=GROQ_API_KEY)
-# groq_client1 = Groq(api_key=GROQ_API_KEY1)
-# groq_client2 = Groq(api_key=GROQ_API_KEY2)
+DATURA_API_KEY = os.environ.get("DATURA_API_KEY")
+NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
-OPEN_AI_KEY = "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"
-# Constants openai/gpt-4.5-preview openai/gpt-3.5-turbo
-# MODEL_NAME = "llama-3.3-70b-versatile"  
+OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
+
 MODEL_NAME = "gpt-4"
-MODEL_NAME_1 = "gpt-4"
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 from autogen_agentchat.agents import AssistantAgent
