@@ -34,15 +34,19 @@ warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will
 st.title("Polymarket Prediction Chatbot")
 
 # API Keys - Replace with your actual keys
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY1")
-GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY2")
+#GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+#GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY1")
+#GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY2")
 
-OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
-DATURA_API_KEY = os.environ.get("DATURA_API_KEY")
-NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
+# API Keys - Replace with your actual keys
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY", "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")
+GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY", "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")
+OPEN_AI_KEY = "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"
+DATURA_API_KEY = os.environ.get("DATURA_API_KEY", "dt_$X6oACKtNOE_2RL984Dg-C8Ds6HZmsQLA4N7ez3NysVg")
+NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN", "drAk0dGvkyZWSoutZe1sRgfY81HpTYiwERgrSgsw")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBo8-CKyb3IzZbRzx685TqDi9EutAg7FkE")
+GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID", "64c807de4a9d1425d")
 
 # # Initialize Groq clients
 # groq_client = Groq(api_key=GROQ_API_KEY)
@@ -56,52 +60,6 @@ DATURA_API_URL = "https://apis.datura.ai/twitter"
 with st.sidebar:
     st.header("API Configuration")
     selected_model = st.selectbox("Model", [MODEL_NAME], index=0)
-    
-    # Get an OpenAI API Key before continuing
-    # OpenAI API Key
-    if "OPENAI_AI_KEY" in st.secrets:
-        OPENAI_AI_KEY = st.secrets["OPENAI_AI_KEY"]
-    else:
-        OPENAI_AI_KEY = st.sidebar.text_input("OpenAI API Key", type="password")
-    if not OPENAI_AI_KEY:
-        st.info("Enter an OpenAI API Key to continue")
-        st.stop()
-
-    # Datura API Key
-    if "DATURA_API_KEY" in st.secrets:
-        DATURA_API_KEY = st.secrets["DATURA_API_KEY"]
-    else:
-        DATURA_API_KEY = st.sidebar.text_input("Datura API Key", type="password")
-    if not DATURA_API_KEY:
-        st.info("Enter a Datura API Key to continue")
-        st.stop()
-
-    # News API Token
-    if "NEWS_API_TOKEN" in st.secrets:
-        NEWS_API_TOKEN = st.secrets["NEWS_API_TOKEN"]
-    else:
-        NEWS_API_TOKEN = st.sidebar.text_input("News API Token", type="password")
-    if not NEWS_API_TOKEN:
-        st.info("Enter a News API Token to continue")
-        st.stop()
-
-    # Google API Key
-    if "GOOGLE_API_KEY" in st.secrets:
-        GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-    else:
-        GOOGLE_API_KEY = st.sidebar.text_input("Google API Key", type="password")
-    if not GOOGLE_API_KEY:
-        st.info("Enter a Google API Key to continue")
-        st.stop()
-
-    # Google CSE ID
-    if "GOOGLE_CSE_ID" in st.secrets:
-        GOOGLE_CSE_ID = st.secrets["GOOGLE_CSE_ID"]
-    else:
-        GOOGLE_CSE_ID = st.sidebar.text_input("Google CSE ID")
-    if not GOOGLE_CSE_ID:
-        st.info("Enter a Google CSE ID to continue")
-        st.stop()
 
 # Check for valid API Key & Model
 if not OPEN_AI_KEY or not selected_model:
