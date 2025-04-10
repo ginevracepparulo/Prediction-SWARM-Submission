@@ -53,13 +53,14 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 client = OpenAI(
     base_url="https://api.openai.com/v1",
-    api_key=OPEN_AI_KEY,",
+    api_key="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",
 )
 client1  = OpenAIChatCompletionClient(
     model = MODEL_NAME,
     # base_url="https://api.openai.com/v1",
-    api_key=OPEN_AI_KEY,",
+    api_key="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",
 )
+
 
 # ============ COMPONENT 1: PREDICTION FINDER ============
 
