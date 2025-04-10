@@ -40,7 +40,7 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID", "64c807de4a9d1425d")
 # groq_client1 = Groq(api_key=GROQ_API_KEY1)
 # groq_client2 = Groq(api_key=GROQ_API_KEY2)
 
-OPEN_AI_KEY = "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"
+OPEN_AI_KEY = "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"
 # Constants openai/gpt-4.5-preview openai/gpt-3.5-turbo
 # MODEL_NAME = "llama-3.3-70b-versatile"  
 MODEL_NAME = "gpt-4"

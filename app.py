@@ -42,7 +42,7 @@ st.title("Polymarket Prediction Chatbot")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
 GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY", "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")
 GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY", "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")
-OPEN_AI_KEY = "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"
+OPEN_AI_KEY = "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"
 DATURA_API_KEY = os.environ.get("DATURA_API_KEY", "dt_$X6oACKtNOE_2RL984Dg-C8Ds6HZmsQLA4N7ez3NysVg")
 NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN", "drAk0dGvkyZWSoutZe1sRgfY81HpTYiwERgrSgsw")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBo8-CKyb3IzZbRzx685TqDi9EutAg7FkE")
