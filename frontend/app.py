@@ -55,7 +55,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### ℹ️ About")
     st.markdown("💰 <b>SwarmCents Chat</b> helps you explore and analyze predictions on Polymarket using AI.", unsafe_allow_html=True)
-    st.button("🔄 Reset Chat")
+
 
 st.markdown("""
     <style>
@@ -94,7 +94,7 @@ INITIAL_MESSAGE = [
 ]
 
 # Add a reset button
-if st.sidebar.button("Reset Chat"):
+if st.sidebar.button("🔄 Reset Chat"):
     for key in st.session_state.keys():
         del st.session_state[key]
     st.session_state["messages"] = INITIAL_MESSAGE
