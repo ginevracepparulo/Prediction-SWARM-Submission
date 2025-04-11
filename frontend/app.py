@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
 
 st.set_page_config(page_title="SwarmCents Chat", page_icon="💰", layout="wide")
-st.header("📖KnowledgeGPT")
+st.header("💰SwarmCents Chat")
 
 # API Keys - Replace with your actual keys
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -40,10 +40,10 @@ with st.sidebar:
     st.markdown(
             "# How to use\n"
             "1. Enter your Model below🤖\n"  # noqa: E501
-            "2. Ask a question about the Polymarket Topic💬\n"
+            "2. Ask a question about a Polymarket Topic💬\n"
         )
     
-    st.markdown ("## API Configuration")
+    st.markdown ("# API Configuration")
     selected_model = st.selectbox("Model", [MODEL_NAME, "grok 2", "o3-mini"], index=0)
     
     st.markdown("---")
