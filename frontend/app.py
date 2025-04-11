@@ -97,10 +97,10 @@ for message in st.session_state.messages:
 # Streamlit Input Box
 if prompt := st.chat_input("Type your Query"):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar="🤖"):
         placeholder = st.empty()
         placeholder.markdown("*Thinking...*")
         text_messages = [
