@@ -50,7 +50,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### ⚙️ API Configuration")
-    model = st.selectbox("Choose Model", [MODEL_NAME, "grok 2", "o3-mini"], index=0)
+    selected_model = st.selectbox("Choose Model", [MODEL_NAME, "grok 2", "o3-mini"], index=0)
     
     st.markdown("---")
     st.markdown("### ℹ️ About")
