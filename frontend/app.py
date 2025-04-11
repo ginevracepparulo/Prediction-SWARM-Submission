@@ -60,7 +60,7 @@ DATURA_API_URL = "https://apis.datura.ai/twitter"
 with st.sidebar:
     st.markdown("## 🛠️ How to use")
     st.markdown("1. Choose your Model 🤖\n"
-                "2. Ask a question related to one of the intelligent tasks SwarmCents was designed for through natural language. 💬")
+                "2. Ask a question through natural language. 💬")
 
     st.markdown("---")
     st.markdown("### ⚙️ API Configuration")
@@ -96,7 +96,7 @@ Please select one of these specific options:
 1. Find predictions on [specific topic], also give account names of users who made them. 
 2. Build profile for [@predictor_handle]. Show me their all prediction history and analysis.
 3. Verify prediction: "[exact prediction text]"
-
+4. Calculate the credibility score for [@predictor_handle].
 Which option would you like to proceed with?""",
     },
 ]
