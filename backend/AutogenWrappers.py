@@ -5,7 +5,7 @@ from .PredictionProfiler import PredictionProfiler
 import asyncio
 from typing import List
 import os 
-from OpenAI import OpenAI
+from openai import OpenAI
 
 # Initialize the API keys and URLs
 DATURA_API_KEY = os.environ.get("DATURA_API_KEY")
