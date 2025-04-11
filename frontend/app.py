@@ -91,7 +91,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar="🤖" if message["role"] == "assistant" else "👤"):
         st.markdown(message["content"])
 
 # Streamlit Input Box
