@@ -4,7 +4,7 @@ import requests
 import re
 import os
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 # ============ COMPONENT 1: PREDICTION FINDER ============
 
 class PredictionFinder:
@@ -161,7 +161,7 @@ Ensure the response is **valid JSON** with no additional text.
             for tweet_id, details in hash_dict.items()
             if details["username"] in yes_no_dict and yes_no_dict[details["username"]] == "Yes"
         }
-        
+        print(f"Filtered tweets: {len(filtered_tweets)}")
         return json.dumps(filtered_tweets, indent=4)
     
     def find_predictions(self, user_prompt: str) -> Dict:
@@ -184,6 +184,6 @@ Ensure the response is **valid JSON** with no additional text.
         
         # Filter tweets
         filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
-        print("Filtered predictions:", len(filtered_predictions))
+        print("Filtered predictions:", json.loads(filtered_predictions))
         # Return as dictionary
         return json.loads(filtered_predictions)

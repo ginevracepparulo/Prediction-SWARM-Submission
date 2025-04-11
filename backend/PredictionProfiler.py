@@ -6,7 +6,7 @@ import re
 import json
 import os 
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
 class PredictionProfiler:
@@ -31,9 +31,9 @@ class PredictionProfiler:
             "is_quote": False,
             "is_video": False,
             "is_image": False,
-            "min_retweets": 100,
-            "min_replies": 10,
-            "min_likes": 100,
+            "min_retweets": 0,
+            "min_replies": 0,
+            "min_likes": 0,
             "count": 30  #100
         }
         
@@ -96,22 +96,40 @@ class PredictionProfiler:
             messages=[{"role": "system", "content": system_context},
                       {"role": "user", "content": tweet_list}]
         )
-        
+
         raw_output = response.choices[0].message.content
         
-        # Remove markdown wrapping if present
-        if raw_output.startswith("\njson"):
-            raw_output = re.sub(r"\njson|\n", "", raw_output).strip()
-        
+        raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+
+        # Step 2: Extract JSON Content (if extra text exists)
+        match = re.search(r"\{.*\}", raw_output, re.DOTALL)
+        if match:
+            raw_output = match.group(0)  # Extract only the JSON content
+
         try:
-            parsed = json.loads(raw_output)
-            return {
-                "predictions": parsed.get("predictions", []),
-            }
-        except Exception as e:
-            print("Failed to parse LLM response:")
-            print(raw_output)
+            # Step 3: Ensure valid encoding and parse JSON
+            parsed = json.loads(raw_output.encode().decode('utf-8-sig'))  # Removes BOM if present
+            return {"predictions": parsed.get("predictions", [])}
+
+        except json.JSONDecodeError as e:
+            print("JSON Decode Error:", str(e))
+            print("Raw LLM Output:", repr(raw_output))  # Show raw output to debug
             raise e
+        # raw_output = response.choices[0].message.content
+        
+        # # Remove markdown wrapping if present
+        # if raw_output.startswith("\njson"):
+        #     raw_output = re.sub(r"\njson|\n", "", raw_output).strip()
+        
+        # try:
+        #     parsed = json.loads(raw_output)
+        #     return {
+        #         "predictions": parsed.get("predictions", []),
+        #     }
+        # except Exception as e:
+        #     print("Failed to parse LLM response:")
+        #     print(raw_output)
+        #     raise e
 
     async def apply_filter(self, tweets: List[str], outcomes: Dict) -> List[str]:
         """Apply prediction filter to tweets."""

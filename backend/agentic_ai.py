@@ -31,7 +31,7 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 client = OpenAI(
@@ -432,9 +432,9 @@ class PredictorProfiler:
             "is_quote": False,
             "is_video": False,
             "is_image": False,
-            "min_retweets": 100,
-            "min_replies": 10,
-            "min_likes": 100,
+            "min_retweets": 0,
+            "min_replies": 0,
+            "min_likes": 0,
             "count": 30  #100
         }
         
@@ -869,12 +869,17 @@ if __name__ == "__main__":
     
     # Example 3: Verify a prediction
     prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
-    response = asyncio.run(run_prediction_analysis("Give me predictions on US recession 2025"))
 
-    print("Response from prediction analysis:")
-    print(response)
+    print("User: Hello")
+    print()
+    # response = asyncio.run(run_prediction_analysis("Give me predictions on Will Trump lower tariffs on China in April?"))
 
-    response = asyncio.run(run_prediction_analysis("Give me the credibility score for the 1st profile"))
+    # print("Response from prediction analysis:")
+    # print(response)
+
+    print("User: You are looking awesome today")
+    print()
+    response = asyncio.run(run_prediction_analysis("Give me credibility scores for @SalyersEric"))
 
     print("Response from prediction analysis:")
     print(response)

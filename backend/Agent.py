@@ -7,7 +7,7 @@ import os
 # API Keys - Replace with your actual keys
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 
 client1  = OpenAIChatCompletionClient(
     model = MODEL_NAME,

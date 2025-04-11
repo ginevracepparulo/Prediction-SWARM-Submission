@@ -11,6 +11,16 @@ import sys
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
 
+# import toml
+# import os
+
+# # Load secrets from secrets.toml
+# secrets = toml.load("C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\secrets.toml")
+
+# # Set environment variables
+# for key, value in secrets.items():
+#     os.environ[key] = value
+
 # Add the project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -40,7 +50,7 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 with st.sidebar:

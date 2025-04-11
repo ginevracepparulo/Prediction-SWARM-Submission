@@ -4,7 +4,7 @@ import requests
 import re
 import os 
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 # ============ COMPONENT 3: PREDICTOR VERIFIER ============
 
 class PredictionVerifier:
