@@ -106,7 +106,10 @@ Which option would you like to proceed with?""",
 if st.sidebar.button("🔄 Reset Chat"):
     for key in st.session_state.keys():
         del st.session_state[key]
-    st.session_state["messages"] = INITIAL_MESSAGE
+    # Re-initialize after deleting
+    st.session_state.messages = list(INITIAL_MESSAGE) # Ensure it's a mutable list copy
+    st.rerun() # Force rerun after reset
+
 
 # Display the chat messages
 if "messages" not in st.session_state:
