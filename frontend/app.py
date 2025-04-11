@@ -17,6 +17,10 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+import sys 
+
+# Add the project root to Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Add this near the top of your script
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
