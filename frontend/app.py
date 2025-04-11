@@ -56,19 +56,6 @@ with st.sidebar:
     st.markdown("### ℹ️ About")
     st.markdown("💰 <b>SwarmCents Chat</b> helps you explore and analyze predictions on Polymarket using AI.", unsafe_allow_html=True)
 
-
-st.markdown("""
-    <style>
-        body {
-            background-color: #0f1117;
-        }
-        .stTextInput, .stSelectbox, .stButton {
-            background-color: #1f2025 !important;
-            color: white;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # Check for valid API Key & Model
 if not OPEN_AI_KEY or not selected_model:
     st.warning("You must provide a valid OpenAI API key and select a model!", icon="⚠️")
