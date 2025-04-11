@@ -1,4 +1,4 @@
-from AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, verify_prediction_wrapper, calculate_credibility_scores_batch_wrapper
+from .AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, verify_prediction_wrapper, calculate_credibility_scores_batch_wrapper
 from Autogen import AssistantAgent, CancellationToken
 from Autogen import OpenAIChatCompletionClient
 import os 
