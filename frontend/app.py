@@ -56,8 +56,8 @@ DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 with st.sidebar:
     st.markdown("## 🛠️ How to use")
-    st.markdown("1. Enter your Model 🤖\n"
-                "2. Ask a question about a Polymarket Topic 💬")
+    st.markdown("1. Choose your Model 🤖\n"
+                "2. Ask a question related to one of four intelligent tasks through natural language. 💬")
 
     st.markdown("---")
     st.markdown("### ⚙️ API Configuration")
@@ -88,9 +88,9 @@ INITIAL_MESSAGE = [
     {
         "role": "assistant",
         "content": 
-"""Hey there, I'm SwarmCents Chat! I'm here to help you analyze predictions on Polymarket.
-I'd like to analyze predictions. Please select one of these specific options:
-1. Find predictions on [specific topic], also give account names of users who made them. Try your best to show atleast 10 predictions.
+"""Hey there, I'm SwarmCents Chat! I'm here to help you analyze predictions about Polymarket topics made on Twitter.
+Please select one of these specific options:
+1. Find predictions on [specific topic], also give account names of users who made them. 
 2. Build profile for [@predictor_handle]. Show me their all prediction history and analysis.
 3. Verify prediction: "[exact prediction text]"
 4. Calculate credibility score for [@predictor_handle]
