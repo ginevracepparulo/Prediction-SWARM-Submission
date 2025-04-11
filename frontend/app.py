@@ -16,7 +16,6 @@ import re
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
-from autogen_ext.models.openai import OpenAIChatCompletionClient
 import sys 
 
 # Add the project root to Python path
