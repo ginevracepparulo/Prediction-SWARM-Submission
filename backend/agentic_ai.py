@@ -34,9 +34,6 @@ OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
-from autogen_agentchat.agents import AssistantAgent
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-
 client = OpenAI(
     base_url="https://api.openai.com/v1",
     api_key=OPEN_AI_KEY,
