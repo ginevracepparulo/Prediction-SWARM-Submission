@@ -92,10 +92,13 @@ if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
 def run_async_function(coro):
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        return asyncio.ensure_future(coro)  # returns a Task you can't await in sync
-    else:
+    try:
+        loop = asyncio.get_running_loop()
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        # No event loop in current thread: create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         return loop.run_until_complete(coro)
 
 avatar_assistant = None 
@@ -118,13 +121,8 @@ if prompt := st.chat_input("Type your Query"):
             for m in st.session_state.messages
         ]
         # Run the async function safely
-        future = run_async_function(run_prediction_analysis(text_messages))
+        response = run_async_function(run_prediction_analysis(text_messages))
         
-        # 🤯 Here’s the trick: Wait until it finishes without blocking UI
-        while not future.done():
-            time.sleep(0.1)  # prevent freezing the UI
-
-        response = future.result()
         placeholder.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
