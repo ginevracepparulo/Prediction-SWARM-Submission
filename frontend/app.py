@@ -17,8 +17,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Add this near the top of your script
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
 
-# Streamlit UI
-st.title("Polymarket Prediction Chatbot")
+st.set_page_config(page_title="SwarmCents Chat", page_icon="💰", layout="wide")
+st.header("📖KnowledgeGPT")
 
 # API Keys - Replace with your actual keys
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -37,8 +37,20 @@ DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 # Sidebar for API Key and Model Selection
 with st.sidebar:
-    st.header("API Configuration")
-    selected_model = st.selectbox("Model", [MODEL_NAME], index=0)
+    st.markdown(
+            "# How to use\n"
+            "1. Enter your Model below🤖\n"  # noqa: E501
+            "2. Ask a question about the Polymarket Topic💬\n"
+        )
+    
+    st.markdown ("## API Configuration")
+    selected_model = st.selectbox("Model", [MODEL_NAME, "grok 2", "o3-mini"], index=0)
+    
+    st.markdown("---")
+    st.markdown("# About")
+    st.markdown(
+        "💰SwarmCents Chat allows you to ask questions about Polymarket Topics and get insights into predictions and predictors."
+    )
 
 # Check for valid API Key & Model
 if not OPEN_AI_KEY or not selected_model:
@@ -60,7 +72,7 @@ from backend.Agent import run_prediction_analysis
 INITIAL_MESSAGE = [
     {
         "role": "assistant",
-        "content": "Hey there, I'm SwarmCentsChatbot! I'm here to help you with your prediction analysis. ",
+        "content": "Hey there, I'm SwarmCents Chat! I'm here to help you with your prediction analysis. ",
     },
 ]
 
@@ -70,6 +82,7 @@ if st.sidebar.button("Reset Chat"):
         del st.session_state[key]
     st.session_state["messages"] = INITIAL_MESSAGE
 
+# Display the chat messages
 if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
@@ -85,7 +98,7 @@ if prompt := st.chat_input("Type your Query"):
 
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        placeholder.markdown("🤖 *Thinking...*")
+        placeholder.markdown("Thinking...*")
         text_messages = [
             TextMessage(content=m["content"], source=m["role"])
             for m in st.session_state.messages
