@@ -7,6 +7,7 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
+import time 
 
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
@@ -90,6 +91,13 @@ if st.sidebar.button("🔄 Reset Chat"):
 if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
+def run_async_function(coro):
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        return asyncio.ensure_future(coro)  # returns a Task you can't await in sync
+    else:
+        return loop.run_until_complete(coro)
+
 avatar_assistant = None 
 avatar_user = None
 for message in st.session_state.messages:
@@ -109,12 +117,14 @@ if prompt := st.chat_input("Type your Query"):
             TextMessage(content=m["content"], source=m["role"])
             for m in st.session_state.messages
         ]
-        # Correct async handling
-        loop = asyncio.get_event_loop()
-        task = loop.create_task(run_prediction_analysis(text_messages))
-        ai_response = await task  # if you're in async context already
+        # Run the async function safely
+        future = run_async_function(run_prediction_analysis(text_messages))
+        
+        # 🤯 Here’s the trick: Wait until it finishes without blocking UI
+        while not future.done():
+            time.sleep(0.1)  # prevent freezing the UI
 
-        # Replace placeholder
-        placeholder.markdown(ai_response)
+        response = future.result()
+        placeholder.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
