@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will
 st.set_page_config(page_title="SwarmCents Chat", page_icon="💰", layout="wide")
 st.markdown("""
     <h1 style='text-align: center; color: gold;'>
-        💹 SwarmCents Chat
+        💰 SwarmCents Chat
     </h1>
     <p style='text-align: center; color: lightgray; font-size: 16px;'>
         Your AI guide to Polymarket predictions 📊🔍
