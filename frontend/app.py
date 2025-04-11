@@ -90,17 +90,19 @@ if st.sidebar.button("🔄 Reset Chat"):
 if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
+avatar_assistant = None 
+avatar_user = None
 for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar=":material/robot" if message["role"] == "assistant" else ":matieral/face:"):
+    with st.chat_message(message["role"], avatar=avatar_assistant if message["role"] == "assistant" else avatar_user):
         st.markdown(message["content"])
 
 # Streamlit Input Box
 if prompt := st.chat_input("Type your Query"):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar=":material/face:"):
+    with st.chat_message("user", avatar=avatar_user):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar=":material/robot"):
+    with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
         placeholder.markdown("*Thinking...*")
         text_messages = [
