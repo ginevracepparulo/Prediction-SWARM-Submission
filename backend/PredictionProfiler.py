@@ -289,7 +289,7 @@ class PredictionProfiler:
 
         # Calculate credibility score
         if verification_stats["total"] > 0:
-            credibility_score = verification_stats["true"] / (verification_stats["true"] + verification_stats["false"]) 
+            credibility_score = verification_stats["true"] / verification_stats["total"]
         else:
             credibility_score = 0.0
 
