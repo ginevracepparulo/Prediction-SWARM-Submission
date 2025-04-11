@@ -109,8 +109,12 @@ if prompt := st.chat_input("Type your Query"):
             TextMessage(content=m["content"], source=m["role"])
             for m in st.session_state.messages
         ]
-        response = run_prediction_analysis(text_messages=text_messages)
+        # Correct async handling
+        loop = asyncio.get_event_loop()
+        task = loop.create_task(run_prediction_analysis(text_messages))
+        ai_response = await task  # if you're in async context already
 
-        placeholder.markdown(response)
+        # Replace placeholder
+        placeholder.markdown(ai_response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
