@@ -1,22 +1,15 @@
 import streamlit as st
-from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 import os
-import json
-import requests
-import re
-from typing import List, Dict, Tuple
 import os
 import asyncio
 from openai import OpenAI
+import warnings
+from autogen_agentchat.messages import TextMessage
+import sys 
+
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
-import warnings
-import re
-from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.messages import TextMessage
-from autogen_core import CancellationToken
-import sys 
 
 # Add the project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -64,8 +57,21 @@ client1  = OpenAIChatCompletionClient(
 
 from backend.Agent import run_prediction_analysis
 
+INITIAL_MESSAGE = [
+    {
+        "role": "assistant",
+        "content": "Hey there, I'm SwarmCentsChatbot! I'm here to help you with your prediction analysis. ",
+    },
+]
+
+# Add a reset button
+if st.sidebar.button("Reset Chat"):
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.session_state["messages"] = INITIAL_MESSAGE
+
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = INITIAL_MESSAGE
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -86,6 +92,6 @@ if prompt := st.chat_input("Type your Query"):
         ]
         response = asyncio.run(run_prediction_analysis(text_messages=text_messages))
 
-        st.markdown(response)
+        placeholder.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
