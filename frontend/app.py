@@ -18,7 +18,15 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
 
 st.set_page_config(page_title="SwarmCents Chat", page_icon="💰", layout="wide")
-st.header("💰SwarmCents Chat")
+st.markdown("""
+    <h1 style='text-align: center; color: gold;'>
+        💹 SwarmCents Chat
+    </h1>
+    <p style='text-align: center; color: lightgray; font-size: 16px;'>
+        Your AI guide to Polymarket predictions 📊🔍
+    </p>
+""", unsafe_allow_html=True)
+
 
 # API Keys - Replace with your actual keys
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -35,22 +43,31 @@ OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
-# Sidebar for API Key and Model Selection
 with st.sidebar:
-    st.markdown(
-            "# How to use\n"
-            "1. Enter your Model below🤖\n"  # noqa: E501
-            "2. Ask a question about a Polymarket Topic💬\n"
-        )
-    
-    st.markdown ("# API Configuration")
-    selected_model = st.selectbox("Model", [MODEL_NAME, "grok 2", "o3-mini"], index=0)
+    st.markdown("## 🛠️ How to use")
+    st.markdown("1. Enter your Model 🤖\n"
+                "2. Ask a question about a Polymarket Topic 💬")
+
+    st.markdown("---")
+    st.markdown("### ⚙️ API Configuration")
+    model = st.selectbox("Choose Model", [MODEL_NAME, "grok 2", "o3-mini"], index=0)
     
     st.markdown("---")
-    st.markdown("# About")
-    st.markdown(
-        "💰SwarmCents Chat allows you to ask questions about Polymarket Topics and get insights into predictions and predictors."
-    )
+    st.markdown("### ℹ️ About")
+    st.markdown("💰 <b>SwarmCents Chat</b> helps you explore and analyze predictions on Polymarket using AI.", unsafe_allow_html=True)
+    st.button("🔄 Reset Chat")
+
+st.markdown("""
+    <style>
+        body {
+            background-color: #0f1117;
+        }
+        .stTextInput, .stSelectbox, .stButton {
+            background-color: #1f2025 !important;
+            color: white;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Check for valid API Key & Model
 if not OPEN_AI_KEY or not selected_model:
