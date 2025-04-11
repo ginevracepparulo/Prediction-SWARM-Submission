@@ -1,29 +1,22 @@
 import streamlit as st
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 import os
 import json
 import requests
 import re
-import time
-from typing import List, Dict, Any, Tuple
-from groq import Groq   
+from typing import List, Dict, Tuple
 # import autogen
 # from autogen import Agent, AssistantAgent, UserProxyAgent, ConversableAgent
 import os
 import asyncio
 from openai import OpenAI
-import aiohttp
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
-import sys
-import contextlib
 import warnings
 import re
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.messages import StructuredMessage, TextMessage
-from autogen_agentchat.ui import Console
+from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
@@ -45,7 +38,7 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-MODEL_NAME = "gpt-4"
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 # Sidebar for API Key and Model Selection
@@ -67,9 +60,6 @@ client1  = OpenAIChatCompletionClient(
     # base_url="https://api.openai.com/v1",
     api_key=OPEN_AI_KEY,
 )
-
-#if "openai_model" not in st.session_state:
-#    st.session_state["openai_model"] = "gpt-4"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

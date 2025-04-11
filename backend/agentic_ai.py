@@ -2,24 +2,17 @@ import os
 import json
 import requests
 import re
-import time
-from typing import List, Dict, Any, Tuple
-from groq import Groq   
-import autogen
-from autogen import Agent, AssistantAgent, UserProxyAgent, ConversableAgent
+from typing import List, Dict, Tuple
+from autogen import AssistantAgent
 import os
 import asyncio
 from openai import OpenAI
-import aiohttp
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging1
-import sys
-import contextlib
 import warnings
 import re
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.messages import StructuredMessage, TextMessage
-from autogen_agentchat.ui import Console
+from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
@@ -38,11 +31,10 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-MODEL_NAME = "gpt-4"
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 client = OpenAI(
@@ -239,7 +231,7 @@ Ensure the response is **valid JSON** with no additional text.
         # Return as dictionary
         return json.loads(filtered_predictions)
 
-# ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
+# ============ COMPONENT 3: PREDICTOR VERIFIER ============
 
 class PredictionVerifier:
     """Verifies whether predictions have come true or proven false."""
@@ -709,7 +701,6 @@ class PredictorProfiler:
         return await asyncio.gather(*tasks)
 
 
-
 # ============ AUTOGEN INTEGRATION ============
 # Register the functions with the agents
 
@@ -799,23 +790,14 @@ function_definitions = [
 ]
 
 
-# tools_schema = [
-#     {"type": "function", "function": func_def} for func_def in function_definitions
-# ]
 tools_schema = [func_def for func_def in function_definitions]
+
 # Global variable to store the assistant agent
 persistent_assistant = None
 
 # Define Autogen agents
 def create_prediction_agents():
-    # Configuration for the LLM seed = 42 (Store the previous interactions)
-    # import logging
-    # logging.getLogger("autogen.oai.client").setLevel(logging.ERROR)
-    # llm_config = {
-    #     "config_list": [{"model": MODEL_NAME_1, "api_key": OPEN_AI_KEY, "base_url": "https://openrouter.ai/api/v1"}],
-    #     "temperature": 0.3,
-    #     "tools": tools_schema,
-    # }
+
     global persistent_assistant
     if persistent_assistant is not None:
         return persistent_assistant  # Reuse existing agent    
@@ -864,18 +846,6 @@ Respond ONLY with one of these approaches:
     model_client_stream=True,  # Enable streaming tokens from the model client.
     )
     
-    
-    # # Create the user proxy agent with execution disabled
-    # user_proxy = UserProxyAgent(
-    #     name="PredictionAnalyst",
-    #     human_input_mode="ALWAYS",
-    #     function_map=function_map,
-    #     code_execution_config={
-    #     "work_dir": "prediction-swarm",
-    #     "use_docker": False,  # Set to True if you want to run in Docker
-    #     "suppress_stdout": True
-    #     },       
-    # )
     persistent_assistant = assistant  # Store the assistant agent in the global variable
     return assistant
     
@@ -884,10 +854,7 @@ Respond ONLY with one of these approaches:
 async def run_prediction_analysis(query: str = "Give me a summary of the predictions made by @elonmusk"):
     # Create agents
     assistant = create_prediction_agents()
-    # assistant.register_reply(user_proxy, assistant.reply)
-    # user_proxy.register_reply(assistant, user_proxy.reply)
-    # Start the conversation
-    # await Console(assistant.run_stream(task=query))
+
     response = await assistant.on_messages(
         [TextMessage(content=query, source="user")],
         cancellation_token=CancellationToken(),
@@ -895,12 +862,6 @@ async def run_prediction_analysis(query: str = "Give me a summary of the predict
     print("inner", type(response.inner_messages))
     print("chat", type(response.chat_message))
     return response.chat_message.content
-    # print("\n=== FUNCTION EXECUTION SUMMARY ===")
-    # if hasattr(user_proxy, 'function_executions'):
-    #     for execution in user_proxy.function_executions:
-    #         print(f"Called {execution['name']} with args: {execution['args']}")
-    # else:
-    #     print("No functions were executed")
 
 if __name__ == "__main__":
     # Example 1: Find predictions on a topic
