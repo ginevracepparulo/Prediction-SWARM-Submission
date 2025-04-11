@@ -109,7 +109,7 @@ if prompt := st.chat_input("Type your Query"):
             TextMessage(content=m["content"], source=m["role"])
             for m in st.session_state.messages
         ]
-        response = asyncio.run(run_prediction_analysis(text_messages=text_messages))
+        response = run_prediction_analysis(text_messages=text_messages)
 
         placeholder.markdown(response)
 
