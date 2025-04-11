@@ -9,8 +9,11 @@ from autogen_agentchat.messages import TextMessage
 import sys 
 import time 
 
+# --- Configuration ---
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
+
+MAX_HISTORY_TURNS = 5 # Keep last 5 pairs (user+assistant) for context
 
 # import toml
 # import os
@@ -105,10 +108,6 @@ if st.sidebar.button("🔄 Reset Chat"):
         del st.session_state[key]
     st.session_state["messages"] = INITIAL_MESSAGE
 
-# Display the chat messages
-if "messages" not in st.session_state:
-    st.session_state.messages = INITIAL_MESSAGE
-
 def run_async_function(coro):
     try:
         loop = asyncio.get_running_loop()
@@ -119,28 +118,51 @@ def run_async_function(coro):
         asyncio.set_event_loop(loop)
         return loop.run_until_complete(coro)
 
-avatar_assistant = None 
+    # --- Initialize Chat History in Session State ---
+if "messages" not in st.session_state:
+    st.session_state.messages = list(INITIAL_MESSAGE) # Use list() to ensure mutable copy
+
+# --- Display Chat History ---
+avatar_assistant = None
 avatar_user = None
 for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=avatar_assistant if message["role"] == "assistant" else avatar_user):
         st.markdown(message["content"])
 
-# Streamlit Input Box
+# --- Handle User Input ---
 if prompt := st.chat_input("Type your Query"):
+    # 1. Append user message to FULL history (for display)
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar=avatar_user):
         st.markdown(prompt)
 
+    # 2. Prepare the LIMITED history to send to the agent
+    # Keep only the last N messages (user + assistant pairs)
+    # Multiply by 2 for pairs, add 1 if you always want the initial system message if any
+    history_limit = MAX_HISTORY_TURNS * 2
+    limited_history = st.session_state.messages[-history_limit:]
+
+    # Convert the LIMITED history to the format expected by your agent
+    text_messages_for_agent = [
+        # Assuming TextMessage takes content and role (or source)
+        # Adjust instantiation based on TextMessage requirements
+        TextMessage(content=m["content"], role=m["role"]) # Adjust 'role' if it expects 'source' etc.
+        for m in limited_history
+    ]
+
+    # 3. Call the agent with the LIMITED history
     with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
-        placeholder.markdown("*Thinking...*")
-        text_messages = [
-            TextMessage(content=m["content"], source=m["role"])
-            for m in st.session_state.messages
-        ]
-        # Run the async function safely
-        response = run_async_function(run_prediction_analysis(text_messages))
-        
-        placeholder.markdown(response)
+        placeholder.markdown("Thinking...")
+        try:
+            # Pass the truncated message list to your backend
+            response = run_async_function(run_prediction_analysis(text_messages_for_agent))
+            placeholder.markdown(response)
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+            response = "Sorry, I encountered an error." # Provide a fallback response
+            placeholder.markdown(response)
 
+
+    # 4. Append assistant response to FULL history (for display)
     st.session_state.messages.append({"role": "assistant", "content": response})
