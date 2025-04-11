@@ -7,6 +7,7 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
+import time 
 
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
@@ -100,25 +101,38 @@ if st.sidebar.button("🔄 Reset Chat"):
 if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
+def run_async_function(coro):
+    try:
+        loop = asyncio.get_running_loop()
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        # No event loop in current thread: create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+
+avatar_assistant = None 
+avatar_user = None
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar=avatar_assistant if message["role"] == "assistant" else avatar_user):
         st.markdown(message["content"])
 
 # Streamlit Input Box
 if prompt := st.chat_input("Type your Query"):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=avatar_user):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
         placeholder.markdown("*Thinking...*")
         text_messages = [
             TextMessage(content=m["content"], source=m["role"])
             for m in st.session_state.messages
         ]
-        response = asyncio.run(run_prediction_analysis(text_messages=text_messages))
-
+        # Run the async function safely
+        response = run_async_function(run_prediction_analysis(text_messages))
+        
         placeholder.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
