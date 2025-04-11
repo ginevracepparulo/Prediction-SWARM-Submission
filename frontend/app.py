@@ -87,7 +87,14 @@ from backend.Agent import run_prediction_analysis
 INITIAL_MESSAGE = [
     {
         "role": "assistant",
-        "content": "Hey there, I'm SwarmCents Chat! I'm here to help you with your prediction analysis. ",
+        "content": 
+"Hey there, I'm SwarmCents Chat! I'm here to help you analyze predictions on Polymarket."
+"Please select one of these specific options:"
+"1. Find predictions on [specific topic], also give account names of users who made them. Try your best to show atleast 10 predictions."
+"2. Build profile for [@predictor_handle]. Show me their all prediction history and analysis."
+"3. Verify prediction: [exact prediction text]"
+"4. Calculate credibility score for [@predictor_handle]"
+"Which option would you like to proceed with?",
     },
 ]
 
