@@ -10,10 +10,10 @@ import sys
 import time 
 
 # --- Configuration ---
+MAX_HISTORY_TURNS = 5 # Keep last 5 pairs (user+assistant) for context
+
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
-
-MAX_HISTORY_TURNS = 5 # Keep last 5 pairs (user+assistant) for context
 
 # import toml
 # import os
@@ -108,6 +108,10 @@ if st.sidebar.button("🔄 Reset Chat"):
         del st.session_state[key]
     st.session_state["messages"] = INITIAL_MESSAGE
 
+# Display the chat messages
+if "messages" not in st.session_state:
+    st.session_state.messages = INITIAL_MESSAGE
+
 def run_async_function(coro):
     try:
         loop = asyncio.get_running_loop()
@@ -117,7 +121,7 @@ def run_async_function(coro):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         return loop.run_until_complete(coro)
-
+    
     # --- Initialize Chat History in Session State ---
 if "messages" not in st.session_state:
     st.session_state.messages = list(INITIAL_MESSAGE) # Use list() to ensure mutable copy
@@ -144,9 +148,8 @@ if prompt := st.chat_input("Type your Query"):
 
     # Convert the LIMITED history to the format expected by your agent
     text_messages_for_agent = [
-        # Assuming TextMessage takes content and role (or source)
-        # Adjust instantiation based on TextMessage requirements
-        TextMessage(content=m["content"], role=m["role"]) # Adjust 'role' if it expects 'source' etc.
+        # Assuming TextMessage takes content and source)
+        TextMessage(content=m["content"], source=m["role"]) # Adjust 'role' if it expects 'source' etc.
         for m in limited_history
     ]
 
@@ -166,3 +169,6 @@ if prompt := st.chat_input("Type your Query"):
 
     # 4. Append assistant response to FULL history (for display)
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # 5. Optional: Rerun to ensure the latest message is displayed immediately if needed
+    # st.rerun() # Usually not needed as Streamlit handles updates, but can force it.
