@@ -91,16 +91,16 @@ if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar="🤖" if message["role"] == "assistant" else "👤"):
+    with st.chat_message(message["role"], avatar=":material/robot" if message["role"] == "assistant" else ":matieral/face:"):
         st.markdown(message["content"])
 
 # Streamlit Input Box
 if prompt := st.chat_input("Type your Query"):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message("user", avatar=":material/face:"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar=":material/robot"):
         placeholder = st.empty()
         placeholder.markdown("*Thinking...*")
         text_messages = [
