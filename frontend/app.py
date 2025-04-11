@@ -95,7 +95,7 @@ I'd like to analyze predictions. Please select one of these specific options:
 3. Verify prediction: "[exact prediction text]"
 4. Calculate credibility score for [@predictor_handle]
 
-Which option would you like to proceed with? (1-4)""",
+Which option would you like to proceed with?""",
     },
 ]
 
