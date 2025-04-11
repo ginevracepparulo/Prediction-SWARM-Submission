@@ -98,7 +98,7 @@ class PredictionProfiler:
         )
 
         raw_output = response.choices[0].message.content
-        
+
         raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
 
         # Step 2: Extract JSON Content (if extra text exists)
@@ -289,7 +289,7 @@ class PredictionProfiler:
 
         # Calculate credibility score
         if verification_stats["total"] > 0:
-            credibility_score = verification_stats["true"] / verification_stats["total"]
+            credibility_score = verification_stats["true"] / (verification_stats["true"] + verification_stats["false"]) 
         else:
             credibility_score = 0.0
 
