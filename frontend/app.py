@@ -75,7 +75,8 @@ if prompt := st.chat_input("Type your Query"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        
+        placeholder = st.empty()
+        placeholder.markdown("🤖 *Thinking...*")
         text_messages = [
             TextMessage(content=m["content"], source=m["role"])
             for m in st.session_state.messages

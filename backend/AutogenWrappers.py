@@ -1,5 +1,5 @@
 
-import PredictionFinder, PredictionVerifier, PredictorProfiler
+import PredictionFinder, PredictionVerifier, PredictionProfiler
 import asyncio
 from typing import List
 import os 
@@ -23,7 +23,7 @@ client = OpenAI(
 
 # ============ AUTOGEN INTEGRATION ============
 prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL)
-predictor_profiler = PredictorProfiler(client, DATURA_API_KEY, DATURA_API_URL)
+predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL)
 prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
 
 # Register the functions with the agents

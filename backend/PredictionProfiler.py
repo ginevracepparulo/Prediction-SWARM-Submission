@@ -9,7 +9,7 @@ import os
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4")
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
-class PredictorProfiler:
+class PredictionProfiler:
     def __init__(self, groq_client, datura_api_key, datura_api_url):
         self.groq_client = groq_client
         self.datura_api_key = datura_api_key
