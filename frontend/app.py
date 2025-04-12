@@ -1,3 +1,4 @@
+import trycourier
 import streamlit as st
 from streamlit_login_auth_ui.widgets import __login__
 import os 
@@ -21,4 +22,4 @@ def check_login():
 LOGGED_IN, auth_obj = check_login()
 
 if LOGGED_IN:
-    st.switch_page("pages/app.py")
+    st.switch_page("pages/main.py")

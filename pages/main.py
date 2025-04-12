@@ -7,7 +7,7 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
-from frontend.authentication import check_login
+from frontend.app import check_login
 
 # --- Authentication ---
 LOGGED_IN, auth_obj = check_login()
