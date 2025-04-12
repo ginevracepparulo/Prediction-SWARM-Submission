@@ -7,13 +7,6 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
-from frontend.authentication import check_login
-
-# --- Authentication ---
-LOGGED_IN, auth_obj = check_login()
-
-if LOGGED_IN:
-    username = auth_obj.get_username()
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 5 # Keep last 5 pairs (user+assistant) for context
