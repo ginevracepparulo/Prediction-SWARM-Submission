@@ -47,7 +47,6 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 
 # Sidebar
 with st.sidebar:
-    st.title(f"Welcome, {username}! 🎉")
     st.markdown("## 🛠️ How to use")
     st.markdown("1. Choose your Model 🤖\n"
                 "2. Ask a question through natural language. 💬")
