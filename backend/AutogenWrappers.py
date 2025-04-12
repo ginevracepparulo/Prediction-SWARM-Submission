@@ -15,7 +15,6 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 client = OpenAI(

@@ -7,7 +7,13 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
-import time 
+from frontend.authentication import check_login
+
+# --- Authentication ---
+LOGGED_IN, auth_obj = check_login()
+
+if LOGGED_IN:
+    username = auth_obj.get_username()
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 5 # Keep last 5 pairs (user+assistant) for context
@@ -31,6 +37,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Add this near the top of your script
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
 
+# --- Streamlit App ---
 st.set_page_config(page_title="SwarmCents Chat", page_icon="💰", layout="wide")
 st.markdown("""
     <h1 style='text-align: center; color: gold;'>
@@ -41,23 +48,13 @@ st.markdown("""
     </p>
 """, unsafe_allow_html=True)
 
-
-# API Keys - Replace with your actual keys
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY")
-GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY")
-
-DATURA_API_KEY = os.environ.get("DATURA_API_KEY")
-NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
-
+# API Keys
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
-
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
-DATURA_API_URL = "https://apis.datura.ai/twitter"
 
+# Sidebar
 with st.sidebar:
+    st.title(f"Welcome, {username}! 🎉")
     st.markdown("## 🛠️ How to use")
     st.markdown("1. Choose your Model 🤖\n"
                 "2. Ask a question through natural language. 💬")
@@ -87,6 +84,7 @@ client1  = OpenAIChatCompletionClient(
 
 from backend.Agent import run_prediction_analysis
 
+# --- Initialize Chat History in Session State ---
 INITIAL_MESSAGE = [
     {
         "role": "assistant",
@@ -129,8 +127,8 @@ def run_async_function(coro):
             # Clean up any lingering async generators
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
-    
-    # --- Initialize Chat History in Session State ---
+
+# Initialize chat messages in session state    
 if "messages" not in st.session_state:
     st.session_state.messages = list(INITIAL_MESSAGE) # Use list() to ensure mutable copy
 

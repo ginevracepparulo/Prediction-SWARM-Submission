@@ -4,7 +4,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
 import os 
 
-# API Keys - Replace with your actual keys
+# Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")

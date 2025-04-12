@@ -6,7 +6,9 @@ import re
 import json
 import os 
 
+# Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
+
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
 class PredictionProfiler:
