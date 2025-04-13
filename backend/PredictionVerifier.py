@@ -5,10 +5,13 @@ import re
 import os 
 from datura import Datura
 
+
+
 # Initialise environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 
 DATURA_API_KEY = os.getenv("DATURA_API_KEY")
+
 # ============ COMPONENT 3: PREDICTOR VERIFIER ============
 
 class PredictionVerifier:
