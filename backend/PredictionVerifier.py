@@ -20,7 +20,7 @@ class PredictionVerifier:
         self.news_api_token = news_api_token
         self.google_api_key = google_api_key
         self.google_cse_id = google_cse_id
-        self.datura = Datura(api_key=os.getenv(DATURA_API_KEY))
+        self.datura = Datura(api_key=DATURA_API_KEY)
     
     def fetch_google_results(self, query: str) -> List[Dict]:
         """Fetch search results from Google Custom Search API."""
