@@ -15,7 +15,7 @@ DATURA_API_KEY = os.getenv("DATURA_API_KEY")
 class PredictionVerifier:
     """Verifies whether predictions have come true or proven false."""
     
-    def _init_(self, groq_client, news_api_token, google_api_key, google_cse_id):
+    def __init__(self, groq_client, news_api_token, google_api_key, google_cse_id):
         self.groq_client = groq_client
         self.news_api_token = news_api_token
         self.google_api_key = google_api_key
