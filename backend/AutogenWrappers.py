@@ -32,7 +32,7 @@ prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY,
 def find_predictions_wrapper(user_prompt: str):
     """Wrapper for the find_predictions function"""
     print("Finding predictions...")
-    return prediction_finder.find_predictions(user_prompt)
+    return asyncio.run(prediction_finder.find_predictions(user_prompt))
     
 def build_profiles_wrapper(handles: List[str]):
     """Wrapper for the build_profiles function"""
@@ -47,7 +47,7 @@ def  calculate_credibility_scores_batch_wrapper(handles: List[str]):
 def verify_prediction_wrapper(prediction: str):
     print("Verifying prediction...")    
     """Wrapper for the verify_prediction function"""
-    return asyncio.run(prediction_verifier.verify_prediction(prediction))
+    return prediction_verifier.verify_prediction(prediction)
 
 if __name__ == "__main__":
     find_predictions_wrapper("Given me predictions on Will trump lower tariffs on china in april?")
