@@ -1,7 +1,7 @@
 
-from PredictionFinder import PredictionFinder
-from PredictionVerifier import PredictionVerifier
-from PredictionProfiler import PredictionProfiler
+from .PredictionFinder import PredictionFinder
+from .PredictionVerifier import PredictionVerifier
+from .PredictionProfiler import PredictionProfiler
 import asyncio
 from typing import List
 import os 
