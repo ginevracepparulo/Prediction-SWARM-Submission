@@ -1,7 +1,7 @@
 
-from .PredictionFinder import PredictionFinder
-from .PredictionVerifier import PredictionVerifier
-from .PredictionProfiler import PredictionProfiler
+from PredictionFinder import PredictionFinder
+from PredictionVerifier import PredictionVerifier
+from PredictionProfiler import PredictionProfiler
 import asyncio
 from typing import List
 import os 
@@ -47,4 +47,7 @@ def  calculate_credibility_scores_batch_wrapper(handles: List[str]):
 def verify_prediction_wrapper(prediction: str):
     print("Verifying prediction...")    
     """Wrapper for the verify_prediction function"""
-    return prediction_verifier.verify_prediction(prediction)
+    return asyncio.run(prediction_verifier.verify_prediction(prediction))
+
+if __name__ == "__main__":
+    find_predictions_wrapper("Given me predictions on Will trump lower tariffs on china in april?")

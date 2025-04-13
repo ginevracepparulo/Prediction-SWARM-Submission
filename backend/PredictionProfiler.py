@@ -1,7 +1,7 @@
 from typing import List, Dict
 import asyncio 
 import requests
-from backend.PredictionVerifier import PredictionVerifier
+from PredictionVerifier import PredictionVerifier
 import re
 import json
 import os 
