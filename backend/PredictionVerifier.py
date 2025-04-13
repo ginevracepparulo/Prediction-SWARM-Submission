@@ -3,7 +3,7 @@ from typing import List, Dict
 import requests
 import re
 import os 
-import Datura 
+from datura import Datura
 
 # Initialise environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
