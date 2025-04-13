@@ -15,7 +15,8 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-DATURA_API_URL = "https://apis.datura.ai/twitter"
+DATURA_API_URL1 = "https://apis.datura.ai/twitter"
+DATURA_API_URL2 = "https://apis.datura.ai/desearch/ai/search/links/twitter"
 
 client = OpenAI(
     base_url="https://api.openai.com/v1",
@@ -23,8 +24,8 @@ client = OpenAI(
 )
 
 # ============ AUTOGEN INTEGRATION ============
-prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL)
-predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL)
+prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL2)
+predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL1)
 prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
 
 # Register the functions with the agents

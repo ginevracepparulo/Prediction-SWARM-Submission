@@ -15,23 +15,26 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 # Add this near the top of your script
 warnings.filterwarnings("ignore", message=r"Model .* is not found. The cost will be 0.*")
 
 # API Keys - Replace with your actual keys
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_API_KEY1 = os.environ.get("GROQ_API_KEY")
-GROQ_API_KEY2 = os.environ.get("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY1 = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY2 = os.getenv("GROQ_API_KEY")
 
-DATURA_API_KEY = os.environ.get("DATURA_API_KEY")
-NEWS_API_TOKEN = os.environ.get("NEWS_API_TOKEN")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
+DATURA_API_KEY = os.getenv("DATURA_API_KEY")
+NEWS_API_TOKEN = os.getenv("NEWS_API_TOKEN")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
-OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
+OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
 
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-2024-08-06")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 client = OpenAI(
@@ -91,21 +94,24 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         )
         
         return completion.choices[0].message.content.strip()
-    
-    def get_tweets(self, query: str, min_likes: int = 100, count: int = 20) -> List[Dict]:
-        """Fetch tweets from Datura API based on the generated query."""
+
+    async def get_tweets(self, query: str, min_likes: int = 0, count: int = 100, max_retries = 5) -> List[Dict]:
+        #Fetch tweets from Datura API based on the generated query.
+
+        url = "https://apis.datura.ai/desearch/ai/search/links/twitter"
+
         payload = {
-            "query": query,
-            "sort": "Top",
-            "start_date": "2024-02-25",
+            "prompt": query,
+            "model": "HORIZON",
+            "start_date": "2024-04-10",
             "lang": "en",
-            "verified": True,
-            "blue_verified": True,
+            "verified": False,
+            "blue_verified": False,
             "is_quote": False,
             "is_video": False,
             "is_image": False,
-            "min_retweets": 100,
-            "min_replies": 10,
+            "min_retweets": 0,
+            "min_replies": 0,
             "min_likes": min_likes,
             "count": count
         }
@@ -115,23 +121,40 @@ Now, given the following user prompt, generate a properly formatted Datura API q
             "Content-Type": "application/json"
         }
         
-        response = requests.get(self.datura_api_url, params=payload, headers=headers)
+        for attempt in range(max_retries):
+            try:
+                #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
+                response = await asyncio.to_thread(requests.post, url=url, json=payload, headers=headers)
+                response.raise_for_status()
+                #print("✅ Response received.")
+                data = response.json()
+                tweets_ls = data.get("miner_tweets", [])
+                #print(tweets_ls)
+                #print(len(tweets_ls), "tweets found")
+                if len(tweets_ls) > 0:
+                    return tweets_ls
+                
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries-1:
+                    print("🚫 Max retries reached. Returning error.")
+                    return []
+            
+            print(f"Attempt {attempt + 1} failed. Retrying...")
+            await asyncio.sleep(2)
         
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Error fetching tweets: {response.status_code}")
-            return []
-    
+        print("🚫 Max retries reached. Returning error.")
+        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
+
     def process_tweets(self, tweets: List[Dict]) -> Tuple[Dict, Dict]:
         """Process tweets to create structured data."""
         hash_dict = {}
         username_to_tweet = {}
         
         for tweet in tweets:
-            username = tweet["user"]["id"]
+            user_id = tweet["user"]["id"]
             
-            hash_dict[username] = {
+            hash_dict[user_id] = {
                 "username": tweet["user"]["username"],
                 "favourites_count": tweet["user"]["favourites_count"],
                 "is_blue_verified": tweet["user"]["is_blue_verified"],
@@ -204,27 +227,26 @@ Ensure the response is **valid JSON** with no additional text.
         
         return json.dumps(filtered_tweets, indent=4)
     
-    def find_predictions(self, user_prompt: str) -> Dict:
+    async def find_predictions(self, user_prompt: str) -> Dict:
         """Main method to find predictions based on user prompt."""
-        # Generate search query
-        query = self.generate_search_query(user_prompt)
-        print(f"Generated Search Query: {query}")
+
+        print(f"Generated Search Query: {user_prompt}")
         
         # Get tweets
-        tweets = self.get_tweets(query)
+        tweets = await self.get_tweets(user_prompt)
         
         if not tweets:
             return {"error": "No tweets found matching the criteria"}
-        
+
         # Process tweets
         hash_dict, username_to_tweet = self.process_tweets(tweets)
-        
+
         # Analyze predictions
         prediction_analysis = self.analyze_predictions(username_to_tweet)
-        
+
         # Filter tweets
         filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
-        print("Filtered predictions:", len(filtered_predictions))
+
         # Return as dictionary
         return json.loads(filtered_predictions)
 
@@ -704,7 +726,7 @@ class PredictorProfiler:
 def find_predictions_wrapper(user_prompt: str):
     """Wrapper for the find_predictions function"""
     print("Finding predictions...")
-    return prediction_finder.find_predictions(user_prompt)
+    return asyncio.run(prediction_finder.find_predictions(user_prompt))
     
 def build_profiles_wrapper(handles: List[str]):
     """Wrapper for the build_profiles function"""
@@ -872,14 +894,14 @@ if __name__ == "__main__":
 
     print("User: Hello")
     print()
-    # response = asyncio.run(run_prediction_analysis("Give me predictions on Will Trump lower tariffs on China in April?"))
+    response = asyncio.run(run_prediction_analysis("Given me predictions on Next Governement of Canada"))
 
     # print("Response from prediction analysis:")
     # print(response)
 
-    print("User: You are looking awesome today")
-    print()
-    response = asyncio.run(run_prediction_analysis("Give me credibility scores for @SalyersEric"))
+    #print("User: You are looking awesome today")
+    #print()
+    #response = asyncio.run(run_prediction_analysis("Give me credibility scores for @SalyersEric"))
 
     print("Response from prediction analysis:")
     print(response)
