@@ -18,6 +18,11 @@ class PredictionProfiler:
         self.datura_api_url = datura_api_url
 
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
+        print(handle)
+
+        if handle.startswith("@"):
+            handle = handle[1:]
+
         """Fetch recent tweets from a specific user."""
         headers = {
             "Authorization": f"{self.datura_api_key}",
@@ -28,8 +33,8 @@ class PredictionProfiler:
             "query": f"from:{handle}",
             "sort": "Top",
             "lang": "en",
-            "verified": False,
-            "blue_verified": False,
+            "verified": True,
+            "blue_verified": True,
             "is_quote": False,
             "is_video": False,
             "is_image": False,
