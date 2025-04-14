@@ -31,7 +31,9 @@ class PredictionVerifier:
         if response.status_code == 200:
             data = response.json()
             # print("Google data", data)
+            print("Capturing the data", data.get("data", []))
             return data.get("items", [])[:2]
+        
         return []
     
     def generate_search_query(self, prediction_query: str) -> str:
@@ -75,18 +77,25 @@ class PredictionVerifier:
         
         return completion.choices[0].message.content.strip()
     
-    def fetch_news_articles(self, search_query: str) -> List[Dict]:
+    def fetch_news_articles(self, search_query: str, max_retries=5) -> List[Dict]:
         """Fetch news articles related to the prediction."""
 
-        result = self.datura.basic_web_search(
-            query=search_query,
-            num=5,
-            start=1
-        )
-
-
-        print("Capturing the data", result.get("data", []))
-        return result.get("data", [])
+        for attempt in range(max_retries):
+            try:
+                response = self.datura.basic_web_search(
+                query=search_query,
+                num=5,
+                start=1
+            )
+                if response:
+                    return response
+                
+            except requests.exceptions.RequestException as e:
+                return {"error": f"Failed to fetch news: {str(e)}", "data": []}
+            
+            print(f"Attempt {attempt + 1} failed. Retrying...")
+            
+            return {"error": "Invalid Username. No tweets found after 5 attempts.", "data": []}
     
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
         """Analyze the sources to determine if the prediction was accurate."""

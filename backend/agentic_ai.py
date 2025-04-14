@@ -894,15 +894,15 @@ if __name__ == "__main__":
 
     print("User: Hello")
     print()
-    response = asyncio.run(run_prediction_analysis("Given me predictions on Will trump lower tariffs on china in april?"))
+    #response = asyncio.run(run_prediction_analysis("Given me predictions on Will trump lower tariffs on china in april?"))
 
     # print("Response from prediction analysis:")
     # print(response)
 
     #print("User: You are looking awesome today")
     #print()
-    #response = asyncio.run(run_prediction_analysis("Give me credibility scores for @SalyersEric"))
+    #response = asyncio.run(run_prediction_analysis("Give me credibility scores for @elonmusk"))
 
     print("Response from prediction analysis:")
     print(response)
-    # asyncio.run(run_prediction_analysis("Now give me credibility scores of the 1st 2 handles in a tabular format"))
+    asyncio.run(run_prediction_analysis("Now give me credibility scores of the 1st 2 handles in a tabular format"))
