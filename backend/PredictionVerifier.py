@@ -35,7 +35,7 @@ class PredictionVerifier:
             return data.get("items", [])[:2]
         
         return []
-    
+
     def generate_search_query(self, prediction_query: str) -> str:
         """Generate a concise question-style search query from a multi-paragraph prediction tweet."""
         context = """
@@ -76,27 +76,40 @@ class PredictionVerifier:
         )
         
         return completion.choices[0].message.content.strip()
-    
-    def fetch_news_articles(self, search_query: str, max_retries=5) -> List[Dict]:
-        """Fetch news articles related to the prediction."""
 
-        for attempt in range(max_retries):
+    def fetch_news_articles(self, search_query: str) -> List[Dict]:
+        """Fetch news articles related to the prediction, with up to 5 retries."""
+
+        max_retries = 5
+        delay = 1  # Start with 1 second delay
+
+        for attempt in range(1, max_retries + 1):
             try:
-                response = self.datura.basic_web_search(
-                query=search_query,
-                num=5,
-                start=1
-            )
-                if response:
-                    return response
-                
-            except requests.exceptions.RequestException as e:
-                return {"error": f"Failed to fetch news: {str(e)}", "data": []}
-            
-            print(f"Attempt {attempt + 1} failed. Retrying...")
-            
-        return {"error": "Invalid Username. No tweets found after 5 attempts.", "data": []}
-    
+                result = self.datura.basic_web_search(
+                    query=search_query,
+                    num=5,
+                    start=1
+                )
+
+                data = result.get("data", [])
+
+                print(f"Attempt {attempt}: Captured data ->", data)
+
+                if data:  # If we got results, return them
+                    return data
+
+            except Exception as e:
+                print(f"Attempt {attempt} failed with error: {e}")
+
+            # If we're not on the last attempt, wait and retry
+            if attempt < max_retries:
+                time.sleep(delay)
+                delay *= 2  # Optional: exponential backoff
+
+        # After all retries fail
+        print("All attempts failed. Returning empty list.")
+        return []
+
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
         """Analyze the sources to determine if the prediction was accurate."""
         article_summaries = "\n".join(
