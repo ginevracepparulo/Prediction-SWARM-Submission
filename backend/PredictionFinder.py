@@ -117,7 +117,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 "tweet_text": tweet["text"],
                 "like_count": tweet["like_count"],
                 "created_at": tweet["created_at"],
-                "url": tweet["media"]["media_url"]
+                "tweet url": tweet["url"],
             }
             
             username_to_tweet[tweet["user"]["username"]] = tweet["text"]
