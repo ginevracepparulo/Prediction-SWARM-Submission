@@ -95,7 +95,7 @@ class PredictionVerifier:
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
             
-            return {"error": "Invalid Username. No tweets found after 5 attempts.", "data": []}
+        return {"error": "Invalid Username. No tweets found after 5 attempts.", "data": []}
     
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
         """Analyze the sources to determine if the prediction was accurate."""
