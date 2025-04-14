@@ -49,5 +49,5 @@ def verify_prediction_wrapper(prediction: str):
     """Wrapper for the verify_prediction function"""
     return prediction_verifier.verify_prediction(prediction)
 
-if __name__ == "__main__":
-    find_predictions_wrapper("Given me predictions on Will trump lower tariffs on china in april?")
+#if __name__ == "__main__":
+    #find_predictions_wrapper("Given me predictions on Will trump lower tariffs on china in april?")
