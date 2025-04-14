@@ -1,7 +1,7 @@
 from typing import List, Dict
 import asyncio 
 import requests
-from backend.PredictionVerifier import PredictionVerifier
+from .PredictionVerifier import PredictionVerifier
 import re
 import json
 import os 
@@ -28,8 +28,8 @@ class PredictionProfiler:
             "query": f"from:{handle}",
             "sort": "Top",
             "lang": "en",
-            "verified": True,
-            "blue_verified": True,
+            "verified": False,
+            "blue_verified": False,
             "is_quote": False,
             "is_video": False,
             "is_image": False,
@@ -47,8 +47,7 @@ class PredictionProfiler:
                 print(len(tweets_ls), "tweets found")
                 if tweets_ls:
                     tweets = [tweet.get("text", "") for tweet in tweets_ls]
-                    raw_tweets = tweets_ls
-                    return {"tweets": tweets, "raw_tweets": raw_tweets}
+                    return {"tweets": tweets}
                 
             except requests.exceptions.RequestException as e:
                 return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": []}
@@ -204,7 +203,7 @@ class PredictionProfiler:
         user_data = await self.build_user_profile(handle)
         
         if "error" in user_data:
-            return {user_data["error"]}
+            return {"error": user_data["error"]}
         
         # Filter predictions
         prediction_outcomes = await self.filter_predictions(user_data["tweets"])
@@ -240,6 +239,8 @@ class PredictionProfiler:
         profile = await self.build_profile(handle)
 
         if "error" in profile:
+            print("This sucks")
+            print("Error in profile:", profile["error"])
             return {"error": profile["error"]}
 
         if not profile["prediction_tweets"]:
