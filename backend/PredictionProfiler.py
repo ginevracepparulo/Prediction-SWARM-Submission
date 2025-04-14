@@ -51,12 +51,12 @@ class PredictionProfiler:
                     return {"tweets": tweets, "raw_tweets": raw_tweets}
                 
             except requests.exceptions.RequestException as e:
-                return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": [], "raw_tweets": []}
+                return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": []}
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
             await asyncio.sleep(2)
         
-        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": [], "raw_tweets": []}
+        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
 
     async def filter_predictions(self, tweets: List[str]) -> Dict:
         """Filter tweets to only include predictions."""
@@ -204,7 +204,7 @@ class PredictionProfiler:
         user_data = await self.build_user_profile(handle)
         
         if "error" in user_data:
-            return {"error": user_data["error"]}
+            return {user_data["error"]}
         
         # Filter predictions
         prediction_outcomes = await self.filter_predictions(user_data["tweets"])
