@@ -4,6 +4,7 @@ import requests
 import re
 import os 
 from datura_py import Datura
+import time
 
 # Initialise environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
