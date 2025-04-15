@@ -6,7 +6,7 @@ from autogen_agentchat.messages import ToolCallRequestEvent, ToolCallExecutionEv
 import os 
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("app")
 
 logger.setLevel(logging.INFO)
 
