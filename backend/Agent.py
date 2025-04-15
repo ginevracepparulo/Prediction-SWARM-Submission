@@ -1,9 +1,8 @@
 from .AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, verify_prediction_wrapper, calculate_credibility_scores_batch_wrapper
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_core import CancellationToken
+from autogen_core import CancellationToken,  ToolCallMessage
 import os 
-from autogen_agentchat.messages import ToolCallMessage
 # Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
