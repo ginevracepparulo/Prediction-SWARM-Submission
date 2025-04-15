@@ -44,6 +44,7 @@ reflect_on_tool_use=True,
 model_client_stream=True,  # Enable streaming tokens from the model client.
 )
 
+"""
 async def run_prediction_analysis(text_messages):
 
     response = await assistant.on_messages(text_messages,
@@ -52,4 +53,28 @@ async def run_prediction_analysis(text_messages):
     print(response.inner_messages)
     print(response.chat_message)
     return response.chat_message.content
+"""
 
+async def run_prediction_analysis(text_messages):
+    current_messages = text_messages[:]
+    cancellation_token = CancellationToken()
+
+    while True:
+        response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
+
+        # Add the full output messages from this round
+        current_messages.extend(response.inner_messages)
+
+        for m in response.inner_messages:
+            role = getattr(m, "role", m.__class__.__name__)
+            content = getattr(m, "content", "")
+            tool_call_id = getattr(m, "tool_call_id", "")
+            print(f"{role}: {content} | Tool Call ID: {tool_call_id}")
+
+        # If assistant responds with tool calls, the next loop handles their execution and response
+        if response.chat_message.tool_calls:
+            # Keep looping; tool call was made, but not resolved yet
+            continue
+
+        # No more tool calls pending - we're done
+        return response.chat_message.content
