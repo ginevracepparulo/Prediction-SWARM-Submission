@@ -174,8 +174,9 @@ if prompt:
             st.error(f"An error occurred: {e}")
             response = "Sorry, I encountered an error." # Provide a fallback response
             placeholder.markdown(response)
-            st.session_state.clear()
-            st.rerun()
+            print("WHATTT AN EXCEPTION WHYYY", e)
+            #st.session_state.clear()
+            #st.rerun()
 
 
     # 4. Append assistant response to FULL history (for display)
