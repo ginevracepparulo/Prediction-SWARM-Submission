@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger("app")
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logger.INFO)
 
 # Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
