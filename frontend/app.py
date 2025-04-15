@@ -7,6 +7,7 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from backend.AutogenWrappers import run_prediction_analysis
 
 # --- Configuration ---
