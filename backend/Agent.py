@@ -1,7 +1,8 @@
 from .AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, verify_prediction_wrapper, calculate_credibility_scores_batch_wrapper
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_core import CancellationToken,  ToolCallMessage
+from autogen_core import CancellationToken
+from autogen_agentchat.messages import ToolCallRequestEvent, ToolCallExecutionEvent
 import os 
 # Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
@@ -87,21 +88,15 @@ async def run_prediction_analysis(text_messages):
         try:
             response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
 
-            # Debug/log
-            for m in response.inner_messages:
-                role = getattr(m, "role", m.__class__.__name__)
-                content = getattr(m, "content", str(m))
-                tool_call_id = getattr(m, "tool_call_id", "")
-                print(f"{role}: {content} | Tool Call ID: {tool_call_id}")
-
-            # Extend context for proper tool lifecycle
+            # Extend context with inner messages
             current_messages.extend(response.inner_messages)
 
-            if any(isinstance(m, ToolCallMessage) for m in response.inner_messages):
-                continue
+            # Check for tool call events
+            if any(isinstance(m, (ToolCallRequestEvent, ToolCallExecutionEvent)) for m in response.inner_messages):
+                continue  # Wait for tool response to complete
 
             return response.chat_message.content
 
         except Exception as e:
-            print("AN EXCEPTION OCCURRED:", str(e))
+            print("An exception occurred:", str(e))
             return "Sorry, I encountered an error while processing your request."
