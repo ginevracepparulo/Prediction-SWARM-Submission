@@ -11,8 +11,8 @@ import sys
 # --- Configuration ---
 MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
 
-os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
-os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
+#os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
+#os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
 
 # import toml
 # import os
