@@ -2,8 +2,14 @@ from .AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, v
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
-from autogen_agentchat.messages import ToolCallRequestEvent, ToolCallExecutionEvent
+from autogen_agentchat.messages import ToolCallRequestEvent, ToolCallExecutionEvent, BaseMessage
 import os 
+import logging
+
+logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.INFO)
+
 # Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
@@ -50,8 +56,8 @@ async def run_prediction_analysis(text_messages):
     response = await assistant.on_messages(text_messages,
         cancellation_token=CancellationToken(),
     )
-    print(response.inner_messages)
-    print(response.chat_message)
+    logger.INFO(response.inner_messages)
+    logger.INFO(response.chat_message)
     return response.chat_message.content
 """
 """
@@ -69,7 +75,7 @@ async def run_prediction_analysis(text_messages):
             role = getattr(m, "role", m.__class__.__name__)
             content = getattr(m, "content", "")
             tool_call_id = getattr(m, "tool_call_id", "")
-            print(f"{role}: {content} | Tool Call ID: {tool_call_id}")
+            logger.INFO(f"{role}: {content} | Tool Call ID: {tool_call_id}")
 
         # If assistant responds with tool calls, the next loop handles their execution and response
         if response.chat_message.tool_calls:
@@ -88,15 +94,29 @@ async def run_prediction_analysis(text_messages):
         try:
             response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
 
-            # Extend context with inner messages
-            current_messages.extend(response.inner_messages)
+            # Debug/log
+            for m in response.inner_messages:
+                role = getattr(m, "role", m.__class__.__name__)
+                content = getattr(m, "content", str(m))
+                tool_call_id = getattr(m, "tool_call_id", "")
+                logger.INFO(f"{role} | Tool Call ID: {tool_call_id}")
 
-            # Check for tool call events
-            if any(isinstance(m, (ToolCallRequestEvent, ToolCallExecutionEvent)) for m in response.inner_messages):
-                continue  # Wait for tool response to complete
+            valid_messages = [m for m in response.inner_messages if isinstance(m, BaseMessage)]
 
-            return response.chat_message.content
+            current_messages.extend(valid_messages)
+
+            # Check if tool_calls exist on the assistant's last message
+            if hasattr(response.chat_message, "tool_calls") and response.chat_message.tool_calls:
+                continue
+            
+            # Safe return
+            if isinstance(response.chat_message, BaseMessage):
+                return response.chat_message.content
+            else:
+                logger.INFO("Invalid chat_message type:", type(response.chat_message))
+                return "Sorry, something went wrong while processing the assistant's response."
+
 
         except Exception as e:
-            print("An exception occurred:", str(e))
+            logger.INFO("An exception occurred:", str(e))
             return "Sorry, I encountered an error while processing your request."

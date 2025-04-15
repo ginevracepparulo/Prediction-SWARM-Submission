@@ -15,7 +15,7 @@ GOOGLE_CSE_ID = os.environ.get("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
-DATURA_API_URL1 = "https://apis.datura.ai/twitter/user"
+DATURA_API_URL1 = "https://apis.datura.ai/twitter/post/user"
 DATURA_API_URL2 = "https://apis.datura.ai/desearch/ai/search/links/twitter"
 
 client = OpenAI(

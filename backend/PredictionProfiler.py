@@ -30,7 +30,7 @@ class PredictionProfiler:
         }
         
         params = {
-            "query": f"until:2024-01-31",
+            #"query": "until:2024-01-31",
             "user": handle,
             "count": 30  #100
         }
