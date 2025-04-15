@@ -8,7 +8,8 @@ import logging
 
 logger = logging.getLogger("app")
 
-logger.setLevel(logger.INFO)
+# Configure the logging system
+logging.basicConfig(level=logging.INFO)
 
 # Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
@@ -56,8 +57,8 @@ async def run_prediction_analysis(text_messages):
     response = await assistant.on_messages(text_messages,
         cancellation_token=CancellationToken(),
     )
-    logger.INFO(response.inner_messages)
-    logger.INFO(response.chat_message)
+    logger.info(response.inner_messages)
+    logger.info(response.chat_message)
     return response.chat_message.content
 """
 """
@@ -75,7 +76,7 @@ async def run_prediction_analysis(text_messages):
             role = getattr(m, "role", m.__class__.__name__)
             content = getattr(m, "content", "")
             tool_call_id = getattr(m, "tool_call_id", "")
-            logger.INFO(f"{role}: {content} | Tool Call ID: {tool_call_id}")
+            logger.info(f"{role}: {content} | Tool Call ID: {tool_call_id}")
 
         # If assistant responds with tool calls, the next loop handles their execution and response
         if response.chat_message.tool_calls:
@@ -99,7 +100,7 @@ async def run_prediction_analysis(text_messages):
                 role = getattr(m, "role", m.__class__.__name__)
                 content = getattr(m, "content", str(m))
                 tool_call_id = getattr(m, "tool_call_id", "")
-                logger.INFO(f"{role} | Tool Call ID: {tool_call_id}")
+                logger.info(f"{role} | Tool Call ID: {tool_call_id}")
 
             valid_messages = [m for m in response.inner_messages if isinstance(m, BaseMessage)]
 
@@ -113,10 +114,10 @@ async def run_prediction_analysis(text_messages):
             if isinstance(response.chat_message, BaseMessage):
                 return response.chat_message.content
             else:
-                logger.INFO("Invalid chat_message type:", type(response.chat_message))
+                logger.info("Invalid chat_message type:", type(response.chat_message))
                 return "Sorry, something went wrong while processing the assistant's response."
 
 
         except Exception as e:
-            logger.INFO("An exception occurred:", str(e))
+            logger.info("An exception occurred:", str(e))
             return "Sorry, I encountered an error while processing your request."
