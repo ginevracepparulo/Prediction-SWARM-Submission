@@ -174,7 +174,6 @@ if prompt:
             st.error(f"An error occurred: {e}")
             response = "Sorry, I encountered an error." # Provide a fallback response
             placeholder.markdown(response)
-            print("WHATTT AN EXCEPTION WHYYY", e)
             #st.session_state.clear()
             #st.rerun()
 
