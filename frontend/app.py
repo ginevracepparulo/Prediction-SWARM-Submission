@@ -7,6 +7,7 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
+from backend.AutogenWrappers import run_prediction_analysis
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
