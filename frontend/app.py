@@ -9,7 +9,7 @@ from autogen_agentchat.messages import TextMessage
 import sys 
 
 # --- Configuration ---
-MAX_HISTORY_TURNS = 5 # Keep last 5 pairs (user+assistant) for context
+MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
 
 os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
 os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
@@ -174,8 +174,8 @@ if prompt:
             st.error(f"An error occurred: {e}")
             response = "Sorry, I encountered an error." # Provide a fallback response
             placeholder.markdown(response)
-            #st.session_state.clear()
-            #st.rerun()
+            st.session_state.clear()
+            st.rerun()
 
 
     # 4. Append assistant response to FULL history (for display)
