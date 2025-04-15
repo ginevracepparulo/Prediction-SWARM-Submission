@@ -3,7 +3,7 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
 import os 
-
+from autogen_agentchat.messages import ToolCallMessage
 # Initialize the API keys and URLs
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
@@ -54,7 +54,7 @@ async def run_prediction_analysis(text_messages):
     print(response.chat_message)
     return response.chat_message.content
 """
-
+"""
 async def run_prediction_analysis(text_messages):
     current_messages = text_messages[:]
     cancellation_token = CancellationToken()
@@ -78,3 +78,31 @@ async def run_prediction_analysis(text_messages):
 
         # No more tool calls pending - we're done
         return response.chat_message.content
+"""
+
+async def run_prediction_analysis(text_messages):
+    current_messages = text_messages[:]
+    cancellation_token = CancellationToken()
+
+    while True:
+        try:
+            response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
+
+            # Debug/log
+            for m in response.inner_messages:
+                role = getattr(m, "role", m.__class__.__name__)
+                content = getattr(m, "content", str(m))
+                tool_call_id = getattr(m, "tool_call_id", "")
+                print(f"{role}: {content} | Tool Call ID: {tool_call_id}")
+
+            # Extend context for proper tool lifecycle
+            current_messages.extend(response.inner_messages)
+
+            if any(isinstance(m, ToolCallMessage) for m in response.inner_messages):
+                continue
+
+            return response.chat_message.content
+
+        except Exception as e:
+            print("AN EXCEPTION OCCURRED:", str(e))
+            return "Sorry, I encountered an error while processing your request."
