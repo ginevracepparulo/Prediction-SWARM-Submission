@@ -30,17 +30,8 @@ class PredictionProfiler:
         }
         
         params = {
-            "query": f"from:{handle}",
-            "sort": "Top",
-            "lang": "en",
-            "verified": True,
-            "blue_verified": True,
-            "is_quote": False,
-            "is_video": False,
-            "is_image": False,
-            "min_retweets": 0,
-            "min_replies": 0,
-            "min_likes": 0,
+            "query": "until:2024-12-31",
+            "user": handle,
             "count": 30  #100
         }
         
