@@ -33,11 +33,19 @@ def find_predictions_wrapper(user_prompt: str):
     """Wrapper for the find_predictions function"""
     print("Finding predictions...")
     return asyncio.run(prediction_finder.find_predictions(user_prompt))
-    
+
+"""
 def build_profiles_wrapper(handles: List[str]):
-    """Wrapper for the build_profiles function"""
+    # Wrapper for the build_profiles function
     print("Building profiles...")
     return asyncio.run(predictor_profiler.build_profiles(handles))
+"""
+
+
+def build_profiles_wrapper(handles: List[str]):
+    # Wrapper for the build_profiles function
+    print("Building profiles...")
+    return asyncio.run(predictor_profiler.get_profiles(handles))
 
 def  calculate_credibility_scores_batch_wrapper(handles: List[str]):
     print("Calculating credibility scores for batch...")

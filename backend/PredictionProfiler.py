@@ -5,10 +5,13 @@ from .PredictionVerifier import PredictionVerifier
 import re
 import json
 import os 
-
+from .Database import Database
 # Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
-MODEL_NAME1 = os.getenv("MODEL_NAME1", "gpt-4o-mini-2024-07-18")
+MODEL_NAME1 = os.environ.get("MODEL_NAME1", "gpt-4o-mini-2024-07-18")
+
+# Database connection
+db = Database()
 
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
@@ -18,8 +21,29 @@ class PredictionProfiler:
         self.datura_api_key = datura_api_key
         self.datura_api_url = datura_api_url
 
+    async def get_profile(self, handle: str) -> Dict:
+        """Fetch profile from db and if not found, build it."""
+        if handle.startswith("@"):
+            handle = handle[1:]
+
+        # Check if the profile exists in the database
+        profile = await db.select_profile(handle)
+        
+        if profile:
+            return profile
+        
+        # If not found, build the user profile
+        profile = await self.build_profile(handle)
+        
+        # Check if profile is famous or is a good predictor
+        if profile["prediction_rate"] > 0.5:
+            # Save the new profile to the database
+            await db.insert_profile(profile)
+        
+        return profile
+
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
-        print(handle)
+        #print(handle)
 
         if handle.startswith("@"):
             handle = handle[1:]
@@ -243,20 +267,26 @@ class PredictionProfiler:
         
         return profile
 
+    async def get_profiles(self, handles: List[str]) -> List[Dict]:
+        # Get profiles for multiple handles concurrently.
+        tasks = [self.get_profile(handle) for handle in handles]
+        profiles = await asyncio.gather(*tasks)
+        return profiles
+    
+    """
     async def build_profiles(self, handles: List[str]) -> List[Dict]:
-        """Build profiles for multiple handles concurrently."""
+        # Build profiles for multiple handles concurrently.
         tasks = [self.build_profile(handle) for handle in handles]
         profiles = await asyncio.gather(*tasks)
         return profiles
+    """
 
     async def calculate_credibility_score(self, handle: str, prediction_verifier: PredictionVerifier) -> Dict:
         """Calculate credibility score asynchronously for a single handle."""
         # Await the profile retrieval
-        profile = await self.build_profile(handle)
+        profile = await self.get_profile(handle)
 
         if "error" in profile:
-            print("This sucks")
-            print("Error in profile:", profile["error"])
             return {"error": profile["error"]}
 
         if not profile["prediction_tweets"]:
