@@ -5,6 +5,8 @@ from autogen_core import CancellationToken
 from autogen_agentchat.messages import ToolCallRequestEvent, ToolCallExecutionEvent, BaseMessage
 import os 
 import logging
+from dotenv import load_dotenv
+load_dotenv()  
 
 logger = logging.getLogger("app")
 

@@ -4,6 +4,8 @@ import requests
 import re
 import os
 import asyncio
+from dotenv import load_dotenv
+load_dotenv()  
 
 # Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")

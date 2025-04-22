@@ -6,6 +6,8 @@ import asyncio
 from typing import List
 import os 
 from openai import OpenAI
+from dotenv import load_dotenv
+load_dotenv()  
 
 # Initialize the API keys and URLs
 DATURA_API_KEY = os.environ.get("DATURA_API_KEY")

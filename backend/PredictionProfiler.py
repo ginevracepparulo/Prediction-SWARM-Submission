@@ -6,6 +6,9 @@ import re
 import json
 import os 
 from .Database import Database
+from dotenv import load_dotenv
+load_dotenv()  
+
 # Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 MODEL_NAME1 = os.environ.get("MODEL_NAME1", "gpt-4o-mini-2024-07-18")
