@@ -44,6 +44,7 @@ st.markdown("""
 # API Keys
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
+OPEN_AI_URL = os.environ.get("OPEN_AI_URL", "https://api.openai.com/v1")
 
 # Sidebar
 with st.sidebar:
@@ -65,13 +66,20 @@ if not OPEN_AI_KEY or not selected_model:
     st.stop()
 
 client = OpenAI(
-    base_url="https://api.openai.com/v1",
+    base_url=OPEN_AI_URL,
     api_key=OPEN_AI_KEY
 )
+
 client1  = OpenAIChatCompletionClient(
     model = MODEL_NAME,
-    # base_url="https://api.openai.com/v1",
+    base_url=OPEN_AI_URL,
     api_key=OPEN_AI_KEY,
+    model_info={
+        "family": "gpt-4o",
+        "json_output": True,
+        "vision": True,  # This can be kept
+        "function_calling": True,  # This can be kept
+    }
 )
 
 from backend.Agent import run_prediction_analysis
