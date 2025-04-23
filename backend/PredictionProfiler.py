@@ -19,13 +19,11 @@ logging.basicConfig(level=logging.INFO)
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 MODEL_NAME1 = os.environ.get("MODEL_NAME1", "gpt-4o-mini-2024-07-18")
 
-# Database connection
-db = Database()
-
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
 class PredictionProfiler:
     def __init__(self, groq_client, datura_api_key, datura_api_url):
+        self.db = Database()
         self.groq_client = groq_client
         self.datura_api_key = datura_api_key
         self.datura_api_url = datura_api_url
@@ -36,8 +34,8 @@ class PredictionProfiler:
             handle = handle[1:]
         logger.info(f"Fetching profile for {handle}")
         # Check if the profile exists in the database
-        response = db.select_profile(handle)
-        logger.info(f"Profile found: {response}")
+        response = self.db.select_profile(handle)
+        logger.info(f"Response: {response}")
 
         if response.count==None:
             logger.info(f"Profile not found in the database for {handle}")
@@ -52,11 +50,12 @@ class PredictionProfiler:
         
         # If not found, build the user profile
         profile = await self.build_profile(handle)
-        
+
         # Check if profile is famous or is a good predictor
-        if profile["prediction_rate"] > 0.5:
+        if profile["prediction_rate"] > 0:
+            logger.info(f"Prediction rate is good {profile['prediction_rate']}")
             # Save the new profile to the database
-            response = db.insert_profile(profile)
+            response = self.db.insert_profile(profile)
 
             if len(response.data)==1:
                 logger.info(f"Profile inserted into the database for {handle}: {profile}")

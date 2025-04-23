@@ -22,12 +22,14 @@ class Database():
             "prediction_tweets": prediction_tweets,
             "analysis": analysis
         }
+        print("Row to be inserted:", row)
         response = self.supabase.table("Predictor Profiles").insert(row).execute()
+        print("Response after insert:", response)
         return response
 
     def select_profile(self,handle):
         response = self.supabase.table("Predictor Profiles").select("*").eq("handle", handle).execute()
-        print("Response:", response)
+        print("Response after select:", response)
         return response
 
     def fetch_profiles(self):

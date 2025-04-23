@@ -27,6 +27,8 @@ client = OpenAI(
     api_key=OPEN_AI_KEY
 )
 
+
+
 # ============ AUTOGEN INTEGRATION ============
 prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL2)
 predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL1)
