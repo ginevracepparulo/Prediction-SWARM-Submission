@@ -5,6 +5,7 @@ import re
 import os
 import asyncio
 from dotenv import load_dotenv
+import requests
 load_dotenv()  
 
 # Initialize environment variables
@@ -44,6 +45,22 @@ Here are some examples of well-structured Datura API queries:
    Query: (Yoon) (SouthKorea) (president) (resign) (before May) 
 
 Now, given the following user prompt, generate a properly formatted Datura API query. (Just the query, no additional text or explanation.)"""
+
+        #url = "https://openrouter.ai/api/v1/chat/completions"
+
+        #payload = {
+        #        "model" : MODEL_NAME,
+        #        "messages" : [
+        #            {"role": "system", "content": context},
+        #            {"role": "user", "content": user_prompt}
+        #            ],
+        #    }
+        #headers={
+        #        "Authorization": "Bearer "+ os.environ.get("OPEN_AI_KEY"),
+        #        "Content-Type": "application/json"
+        #    }
+
+        #completion = requests.post(url, json=payload, headers=headers)
 
         completion = self.groq_client.chat.completions.create(
             model=MODEL_NAME,

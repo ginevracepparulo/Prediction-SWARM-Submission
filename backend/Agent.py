@@ -17,11 +17,18 @@ logging.basicConfig(level=logging.INFO)
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
+OPEN_AI_URL = os.environ.get("OPEN_AI_URL","https://api.openai.com/v1")
 
 client1  = OpenAIChatCompletionClient(
     model = MODEL_NAME,
-    # base_url="https://api.openai.com/v1",
-    api_key=OPEN_AI_KEY,
+    #base_url = OPEN_AI_URL,
+    api_key= OPEN_AI_KEY,
+    #model_info={
+    #    "family": "unknown",
+    #    "json_output": True,
+    #    "vision": True,  # This can be kept
+    #   "function_calling": True,  # This can be kept
+    #}
 )
 
 assistant = AssistantAgent(

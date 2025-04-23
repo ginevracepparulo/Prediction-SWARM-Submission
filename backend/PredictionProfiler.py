@@ -138,7 +138,7 @@ class PredictionProfiler:
             )
             
             raw_output = response.choices[0].message.content
-            print("raw_output", raw_output)
+
             raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
             # Step 2: Extract JSON Content (if extra text exists)
             match = re.search(r"\{.*\}", raw_output, re.DOTALL)
@@ -151,7 +151,7 @@ class PredictionProfiler:
                 all_predictions.extend(parsed.get("predictions", []))
             except json.JSONDecodeError as e:
                 print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
-                print(raw_output)
+
                 # If parsing fails, add "No" for each tweet in the batch as a fallback
                 all_predictions.extend(["No"] * len(batch_tweets))
         

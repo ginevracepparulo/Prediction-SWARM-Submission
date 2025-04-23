@@ -20,8 +20,10 @@ OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY")
 DATURA_API_URL1 = "https://apis.datura.ai/twitter/post/user"
 DATURA_API_URL2 = "https://apis.datura.ai/desearch/ai/search/links/twitter"
 
+OPEN_AI_URL = os.environ.get("OPEN_AI_URL","https://api.openai.com/v1")
+
 client = OpenAI(
-    base_url="https://api.openai.com/v1",
+    base_url=OPEN_AI_URL,
     api_key=OPEN_AI_KEY
 )
 
