@@ -27,7 +27,8 @@ class Database():
 
     def select_profile(self,handle):
         response = self.supabase.table("Predictor Profiles").select("*").eq("handle", handle).execute()
-        return response.data
+        print("Response:", response)
+        return response
 
     def fetch_profiles(self):
         response = self.supabase.table("Predictor Profiles").select("*").execute()

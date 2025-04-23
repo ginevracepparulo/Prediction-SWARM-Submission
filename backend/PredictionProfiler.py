@@ -7,7 +7,13 @@ import json
 import os 
 from .Database import Database
 from dotenv import load_dotenv
+import logging
 load_dotenv()  
+
+logger = logging.getLogger("app")
+
+# Configure the logging system
+logging.basicConfig(level=logging.INFO)
 
 # Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
@@ -28,10 +34,19 @@ class PredictionProfiler:
         """Fetch profile from db and if not found, build it."""
         if handle.startswith("@"):
             handle = handle[1:]
-
+        logger.info(f"Fetching profile for {handle}")
         # Check if the profile exists in the database
-        profile = await db.select_profile(handle)
+        response = db.select_profile(handle)
+        logger.info(f"Profile found: {response}")
+
+        if response.count==None:
+            logger.info(f"Profile not found in the database for {handle}")
+            profile = None
+        else: 
+            profile = response.data[0]
+            logger.info(f"Profile found in the database for {handle}: {profile}")
         
+        # If profile is found, return it
         if profile:
             return profile
         
@@ -41,8 +56,13 @@ class PredictionProfiler:
         # Check if profile is famous or is a good predictor
         if profile["prediction_rate"] > 0.5:
             # Save the new profile to the database
-            await db.insert_profile(profile)
-        
+            response = db.insert_profile(profile)
+
+            if len(response.data)==1:
+                logger.info(f"Profile inserted into the database for {handle}: {profile}")
+            else:
+                logger.info(f"Profile not inserted into the database for {handle}: {profile}")
+
         return profile
 
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
