@@ -24,6 +24,8 @@ class Database():
         # Default collection name
         self.collection_name = "UserProfile"
 
+        self.mongo_collection = self.db[self.collection_name]
+
 
     def insert_profile(self,profile):
         handle = profile["handle"]
