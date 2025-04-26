@@ -19,7 +19,7 @@ class Database():
     def __init__(self):
         # self.supabase = create_client(url, key)
         self.mongodb = pymongo.MongoClient(MongodbClient)
-        self.db = self.client["UserProfileDB"]
+        self.db = self.mongodb["UserProfileDB"]
 
         # Default collection name
         self.collection_name = "UserProfile"
