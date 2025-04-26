@@ -4,16 +4,23 @@ from dotenv import load_dotenv
 import pymongo
 import sys
 import logging
+import unittest
+
+
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
+
+print("Loaded .env file: ", loaded)
 if not loaded:
      # Fallback in case it's mounted at root instead
+     print("Failed to load .env file")
      load_dotenv()
 logger = logging.getLogger("app")
 # url = os.environ.get("SUPABASE_URL")
 # key = os.environ.get("SUPABASE_KEY")
 
-MongodbClient = os.environ.get("MONGODB_CLIENT")
+MongodbClient = os.environ.get("MongodbClient")
+
 class Database():
 
     def __init__(self):
@@ -44,11 +51,9 @@ class Database():
         }
 
         # The document to insert will have key = handle, value = row
-        document = {
-            handle: row
-        }
+        document = row
 
-
+        print("Inserting document: ", document)
         # Check if collection exists, if not create a default collection
         if self.collection_name not in self.db.list_collection_names():
             print(f"Collection {self.collection_name} does not exist. Creating it now.")
@@ -78,26 +83,31 @@ class Database():
 
     def select_profile(self, handle):
         # Query MongoDB using the handle to find the profile
-        logger.info("Runninhg select_profile")
+        logger.info("Running select_profile")
+        print("Running select_profile")
         result = self.mongo_collection.find_one({"handle": handle})
-
+        print("Result: ", result)
         logger.info(f"result {result}")
         if result:
+            profile_data_without_id = {
+                key: value for key, value in result.items() if key != '_id'
+            }
+            return profile_data_without_id
             # Extract the relevant data and return the specified structure
-            profile_data = result.get(handle)  # Since handle is used as the key
-            if profile_data:
-                # Return only the fields you're interested in
-                return {
-                    "handle": profile_data["handle"],
-                    "total_tweets_analyzed": profile_data["total_tweets_analyzed"],
-                    "prediction_tweets": profile_data["prediction_tweets"],
-                    "prediction_count": profile_data["prediction_count"],
-                    "prediction_rate": profile_data["prediction_rate"],
-                    "analysis": profile_data["analysis"]
-                }
-            else:
-                print(f"No profile data found for handle: {handle}")
-                return None
+            # profile_data = result.get(handle)  # Since handle is used as the key
+            # if profile_data:
+            #     # Return only the fields you're interested in
+            #     return {
+            #         "handle": profile_data["handle"],
+            #         "total_tweets_analyzed": profile_data["total_tweets_analyzed"],
+            #         "prediction_tweets": profile_data["prediction_tweets"],
+            #         "prediction_count": profile_data["prediction_count"],
+            #         "prediction_rate": profile_data["prediction_rate"],
+            #         "analysis": profile_data["analysis"]
+            #     }
+            # else:
+            #     print(f"No profile data found for handle select prolifes: {handle}")
+            #     return None
         else:
             print(f"No profile found for handle: {handle}")
             return None
@@ -107,3 +117,5 @@ class Database():
     # def fetch_profiles(self):
     #     response = self.supabase.table("Predictor Profiles").select("*").execute()
     #     return response.data
+
+

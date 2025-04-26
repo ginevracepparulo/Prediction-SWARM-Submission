@@ -17,7 +17,10 @@ from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
 import os
+from Database import Database
+import logging
 
+logger = logging.getLogger("app")
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
 if not loaded:
@@ -38,7 +41,8 @@ GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
 OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
 
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-2024-08-06")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
+MODEL_NAME1 = os.environ.get("MODEL_NAME1", "gpt-4o-mini-2024-07-18")
 DATURA_API_URL = "https://apis.datura.ai/twitter"
 
 client = OpenAI(
@@ -51,7 +55,7 @@ client1  = OpenAIChatCompletionClient(
     api_key=OPEN_AI_KEY,
 )
 
-
+db = Database()
 # ============ COMPONENT 1: PREDICTION FINDER ============
 
 class PredictionFinder:
@@ -436,13 +440,54 @@ class PredictionVerifier:
     
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
-class PredictorProfiler:
+class PredictionProfiler:
     def __init__(self, groq_client, datura_api_key, datura_api_url):
         self.groq_client = groq_client
         self.datura_api_key = datura_api_key
         self.datura_api_url = datura_api_url
 
+    async def get_profile(self, handle: str) -> Dict:
+        """Fetch profile from db and if not found, build it."""
+        if handle.startswith("@"):
+            handle = handle[1:]
+        print(f"Fetching profile for {handle}")
+        # Check if the profile exists in the database
+        response = db.select_profile(handle)     
+        print(f"Profile found: {response}")
+
+        if response==None:
+            print(f"Profile not found in the database for {handle}")
+            profile = None
+        else: 
+            profile = response
+            print(f"Profile found in the database for {handle}: {profile}")
+        
+        # If profile is found, return it
+        if profile:
+            return profile
+        
+        print(f"Profile not found in the database for {handle}. Building profile...")
+        # If not found, build the user profile
+        profile = await self.build_profile(handle)
+        
+        # Check if profile is famous or is a good predictor
+        if profile["prediction_rate"] > 0.3:
+            # Save the new profile to the database
+            response = db.insert_profile(profile)
+
+            if response.inserted_id:
+                logger.info(f"Profile inserted into the database for {handle}: {profile}")
+            else:
+                logger.info(f"Profile not inserted into the database for {handle}: {profile}")
+
+        return profile
+
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
+        print(handle)
+
+        if handle.startswith("@"):
+            handle = handle[1:]
+
         """Fetch recent tweets from a specific user."""
         headers = {
             "Authorization": f"{self.datura_api_key}",
@@ -450,95 +495,107 @@ class PredictorProfiler:
         }
         
         params = {
-            "query": f"from:{handle}",
-            "sort": "Top",
-            "lang": "en",
-            "verified": True,
-            "blue_verified": True,
-            "is_quote": False,
-            "is_video": False,
-            "is_image": False,
-            "min_retweets": 0,
-            "min_replies": 0,
-            "min_likes": 0,
-            "count": 30  #100
+            "user": handle,
+            "query": "until:2024-9-28",
+            "count": 50  #100
         }
         
         for attempt in range(max_retries):
             try:
-                response = await asyncio.to_thread(requests.get, self.datura_api_url, params=params, headers=headers)
+                response = await asyncio.to_thread(requests.get, "https://apis.datura.ai/twitter/post/user", params=params, headers=headers)
                 response.raise_for_status()
                 tweets_ls = response.json()
                 print(len(tweets_ls), "tweets found")
                 if tweets_ls:
                     tweets = [tweet.get("text", "") for tweet in tweets_ls]
-                    raw_tweets = tweets_ls
-                    return {"tweets": tweets, "raw_tweets": raw_tweets}
+                    return {"tweets": tweets}
                 
             except requests.exceptions.RequestException as e:
-                return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": [], "raw_tweets": []}
+                return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": []}
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
             await asyncio.sleep(2)
         
-        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": [], "raw_tweets": []}
+        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
 
     async def filter_predictions(self, tweets: List[str]) -> Dict:
-        """Filter tweets to only include predictions."""
-        # tweets = tweets[:30]  # Limit to 30 tweets for analysis
-
-        tweet_list = "\n".join([f"{i+1}. {t}" for i, t in enumerate(tweets)])
+        """Filter tweets to only include predictions, processing in batches of 25."""
+        # Initialize an empty list to store all prediction results
+        all_predictions = []
+        batch_size = 25
         
-        system_context = """You are an expert in identifying explicit and implicit predictions in tweets that could be relevant to Polymarket, a prediction market platform. Polymarket users bet on future events in politics, policy, business, law, and geopolitics.
+        # Process tweets in batches of 25
+        for i in range(0, len(tweets), batch_size):
+            batch_tweets = tweets[i:i+batch_size]
+            batch_tweet_list = "\n".join([f"{j+1}. {t}" for j, t in enumerate(batch_tweets)])
+            
+            system_context = """You are an expert in identifying **explicit and implicit predictions** in tweets that could be relevant to **Polymarket**, a prediction market platform. Polymarket users bet on **future events** in politics, policy, business, law, and geopolitics.
 
-        **Definitions:**
-        1. **Explicit Prediction**: A direct statement about a future outcome (e.g., 'X will happen,' 'Y is likely to pass').
-        2. **Implicit Prediction**: A statement implying a future outcome (e.g., 'Senator proposes bill,' 'Protests may lead to...').
+            **Definitions:**
+            1. **Explicit Prediction**: A direct statement about a future outcome (e.g., "X will happen," "Y is likely to pass").
+            2. **Implicit Prediction**: A statement implying a future outcome (e.g., "Senator proposes bill," "Protests may lead to...").
 
-        **Polymarket Topics Include:**
-        - Elections, legislation, court rulings
-        - Policy changes (tariffs, regulations)
-        - Business decisions (company moves, market impacts)
-        - Geopolitical events (wars, treaties, sanctions)
-        - Legal/Investigative outcomes (prosecutions, declassifications)
+            **Polymarket Topics Include:**
+            - Elections, legislation, court rulings
+            - Policy changes (tariffs, regulations)
+            - Business decisions (company moves, market impacts)
+            - Geopolitical events (wars, treaties, sanctions)
+            - Legal/Investigative outcomes (prosecutions, declassifications)
 
-        **Exclude:**
-        - Past events (unless they imply future consequences)
-        - Pure opinions without forecastable outcomes
-        - Non-actionable statements (e.g., 'People are struggling')
+            **Important Instruction:** Be *generous* in your classification. If a tweet suggests even a plausible implication of a future event **relevant to Polymarket topics**, classify it as **"Yes"**. It is better to include weak signals than to exclude potentially relevant ones. When in doubt, lean toward **"Yes"**.
 
-        **Examples:**
-        - 'Trump will win in 2024' → **Yes (Explicit)**
-        - 'Senator proposes bill to ban TikTok' → **Yes (Implicit)**
-        - 'The economy is collapsing' → **No (No actionable prediction)**
+            **Exclude:**
+            - Past events (unless they imply future consequences)
+            - Pure opinions without any forecastable outcome
+            - Non-actionable statements (e.g., "People are struggling")
 
-        **Task:** For each tweet, return **'Yes'** if it contains an explicit/implicit prediction relevant to Polymarket, else **'No'**. Respond *only* with a JSON object like:
-        {
-        "predictions": ["Yes", "No", ...]
-        }
-        """
-        
-        response = await asyncio.to_thread(self.groq_client.chat.completions.create,
-            model=MODEL_NAME,
-            messages=[{"role": "system", "content": system_context},
-                      {"role": "user", "content": tweet_list}]
-        )
-        
-        raw_output = response.choices[0].message.content
-        
-        # Remove markdown wrapping if present
-        if raw_output.startswith("\njson"):
-            raw_output = re.sub(r"\njson|\n", "", raw_output).strip()
-        
-        try:
-            parsed = json.loads(raw_output)
-            return {
-                "predictions": parsed.get("predictions", []),
+            **Examples:**
+            - "Trump will win in 2024" → **Yes (Explicit)**
+            - "Senator proposes bill to ban TikTok" → **Yes (Implicit)**
+            - "Nikki Haley is gaining ground in Iowa polls." → **Yes (Implicit)** (implies prediction market relevance)
+            - "Senate to vote on crypto regulation bill next week." → **Yes (Implicit)**
+            - "Will Russia use nuclear weapons in 2024?" → **Yes (Explicit)**
+            - "Israel expected to launch ground invasion of Gaza." → **Yes (Implicit)**
+            - "Elon Musk hints at stepping down as Twitter CEO." → **Yes (Implicit)**
+            - "The economy is collapsing" → **No** (No actionable prediction)
+            - "I miss when politicians actually cared about the people." → **No** (opinion, not predictive)
+            - "The economy crashed last year and it's all downhill from here." → **No** (past event, vague future implication)
+            - "Climate change is real." → **No** (statement, no actionable prediction)
+
+            **Task:** For each tweet, return **"Yes"** if it contains an explicit or implicit prediction relevant to Polymarket — even if it's subtle or implied. Respond *only* with a JSON object like:
+            {
+            "predictions": ["Yes", "No", ...]
             }
-        except Exception as e:
-            print("Failed to parse LLM response:")
-            print(raw_output)
-            raise e
+            """
+            
+            response = await asyncio.to_thread(self.groq_client.chat.completions.create,
+                model=MODEL_NAME1,
+                messages=[{"role": "system", "content": system_context},
+                        {"role": "user", "content": batch_tweet_list}]
+            )
+            
+            raw_output = response.choices[0].message.content
+
+            raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+            # Step 2: Extract JSON Content (if extra text exists)
+            match = re.search(r"\{.*\}", raw_output, re.DOTALL)
+            if match:
+                raw_output = match.group(0)  # Extract only the JSON content
+            
+            try:
+                parsed = json.loads(raw_output.encode().decode('utf-8-sig'))  # Removes BOM if present
+                # Extend the all_predictions list with the batch results
+                all_predictions.extend(parsed.get("predictions", []))
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
+
+                # If parsing fails, add "No" for each tweet in the batch as a fallback
+                all_predictions.extend(["No"] * len(batch_tweets))
+        
+        # Return combined results in the expected format
+        return {
+            "predictions": all_predictions,
+        }
 
     async def apply_filter(self, tweets: List[str], outcomes: Dict) -> List[str]:
         """Apply prediction filter to tweets."""
@@ -608,8 +665,12 @@ class PredictorProfiler:
     async def build_profile(self, handle: str) -> Dict:
         """Main method to build a predictor's profile."""
         # Get user tweets
+
+        print("Inside build profile")
+
         user_data = await self.build_user_profile(handle)
         
+        print("User data:", user_data)
         if "error" in user_data:
             return {"error": user_data["error"]}
         
@@ -635,16 +696,24 @@ class PredictorProfiler:
         
         return profile
 
+    async def get_profiles(self, handles: List[str]) -> List[Dict]:
+        # Get profiles for multiple handles concurrently.
+        tasks = [self.get_profile(handle) for handle in handles]
+        profiles = await asyncio.gather(*tasks)
+        return profiles
+    
+    """
     async def build_profiles(self, handles: List[str]) -> List[Dict]:
-        """Build profiles for multiple handles concurrently."""
+        # Build profiles for multiple handles concurrently.
         tasks = [self.build_profile(handle) for handle in handles]
         profiles = await asyncio.gather(*tasks)
         return profiles
+    """
 
     async def calculate_credibility_score(self, handle: str, prediction_verifier: PredictionVerifier) -> Dict:
         """Calculate credibility score asynchronously for a single handle."""
         # Await the profile retrieval
-        profile = await self.build_profile(handle)
+        profile = await self.get_profile(handle)
 
         if "error" in profile:
             return {"error": profile["error"]}
@@ -733,11 +802,11 @@ def find_predictions_wrapper(user_prompt: str):
     return asyncio.run(prediction_finder.find_predictions(user_prompt))
     
 def build_profiles_wrapper(handles: List[str]):
-    """Wrapper for the build_profiles function"""
+    # Wrapper for the build_profiles function
     print("Building profiles...")
-    return asyncio.run(predictor_profiler.build_profiles(handles))
+    return asyncio.run(predictor_profiler.get_profiles(handles))
 
-def  calculate_credibility_scores_batch_wrapper(handles: List[str]):
+def calculate_credibility_scores_batch_wrapper(handles: List[str]):
     print("Calculating credibility scores for batch...")
     """Wrapper for the calculate_credibility_scores_batch function"""
     return asyncio.run(predictor_profiler.calculate_credibility_scores_batch(handles, prediction_verifier))
@@ -826,7 +895,7 @@ def create_prediction_agents():
         return persistent_assistant  # Reuse existing agent    
     # Initialize components
     prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL)
-    predictor_profiler = PredictorProfiler(client, DATURA_API_KEY, DATURA_API_URL)
+    predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL)
     prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
     
     # Create function map for the UserProxyAgent with the new function
@@ -891,22 +960,26 @@ if __name__ == "__main__":
     prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL)
     
     # Example 2: Build a predictor profile
-    predictor_profiler = PredictorProfiler(client, DATURA_API_KEY, DATURA_API_URL)
+    predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL)
     
     # Example 3: Verify a prediction
     prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
 
     print("User: Hello")
     print()
-    #response = asyncio.run(run_prediction_analysis("Given me predictions on Will trump lower tariffs on china in april?"))
+    response = asyncio.run(run_prediction_analysis("Given me historical profile for @Polymarket"))
 
     # print("Response from prediction analysis:")
-    # print(response)
+    print(response)
 
     #print("User: You are looking awesome today")
     #print()
-    response = asyncio.run(run_prediction_analysis("Give me credibility scores for @elonmusk"))
+    # response = asyncio.run(run_prediction_analysis("Given me historical profile for elonmusk"))
+    # print("Response from prediction analysis:")
+    # print(response)
 
-    print("Response from prediction analysis:")
-    print(response)
-    asyncio.run(run_prediction_analysis("Now give me credibility scores of the 1st 2 handles in a tabular format"))
+    # response = asyncio.run(run_prediction_analysis("Give me credibility scores for @Polymarket"))
+
+    # print("Response from prediction analysis:")
+    # print(response)
+    # asyncio.run(run_prediction_analysis("Now give me credibility scores of the 1st 2 handles in a tabular format"))
