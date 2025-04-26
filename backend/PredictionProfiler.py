@@ -38,13 +38,14 @@ class PredictionProfiler:
         """Fetch profile from db and if not found, build it."""
         if handle.startswith("@"):
             handle = handle[1:]
+
         logger.info(f"Fetching profile for {handle}")
         # Check if the profile exists in the database
-        response = db.select_profile(handle)
+        response = db.select_profile(handle)     
         logger.info(f"Profile found: {response}")
 
         if response==None:
-            logger.info(f"Profile not found in the database for {handle}")
+            logger(f"Profile not found in the database for {handle}")
             profile = None
         else: 
             profile = response
@@ -54,11 +55,12 @@ class PredictionProfiler:
         if profile:
             return profile
         
+        logger.info(f"Profile not found in the database for {handle}. Building profile...")
         # If not found, build the user profile
         profile = await self.build_profile(handle)
         
         # Check if profile is famous or is a good predictor
-        if profile["prediction_rate"] > 0.5:
+        if profile["prediction_rate"] > 0.3:
             # Save the new profile to the database
             response = db.insert_profile(profile)
 
@@ -70,7 +72,7 @@ class PredictionProfiler:
         return profile
 
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
-        #print(handle)
+        print(handle)
 
         if handle.startswith("@"):
             handle = handle[1:]
@@ -82,14 +84,14 @@ class PredictionProfiler:
         }
         
         params = {
-            #"query": "until:2024-01-31",
             "user": handle,
-            "count": 30  #100
+            "query": "until:2024-9-28",
+            "count": 50  #100
         }
         
         for attempt in range(max_retries):
             try:
-                response = await asyncio.to_thread(requests.get, self.datura_api_url, params=params, headers=headers)
+                response = await asyncio.to_thread(requests.get, "https://apis.datura.ai/twitter/post/user", params=params, headers=headers)
                 response.raise_for_status()
                 tweets_ls = response.json()
                 print(len(tweets_ls), "tweets found")
@@ -183,21 +185,7 @@ class PredictionProfiler:
         return {
             "predictions": all_predictions,
         }
-        # raw_output = response.choices[0].message.content
-        
-        # # Remove markdown wrapping if present
-        # if raw_output.startswith("\njson"):
-        #     raw_output = re.sub(r"\njson|\n", "", raw_output).strip()
-        
-        # try:
-        #     parsed = json.loads(raw_output)
-        #     return {
-        #         "predictions": parsed.get("predictions", []),
-        #     }
-        # except Exception as e:
-        #     print("Failed to parse LLM response:")
-        #     print(raw_output)
-        #     raise e
+
 
     async def apply_filter(self, tweets: List[str], outcomes: Dict) -> List[str]:
         """Apply prediction filter to tweets."""
