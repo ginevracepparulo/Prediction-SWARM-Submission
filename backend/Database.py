@@ -55,6 +55,7 @@ class Database():
         # Step 1: Check collection size
         stats = self.db.command("collstats", self.mongo_collection.name)
         size_in_mb = stats['size'] / (1024 * 1024)
+        print(f"Current collection size: {size_in_mb:.2f} MB")
 
         if size_in_mb > 500:  # Approaching 512 MB
             print("Storage limit nearing! Deleting oldest 5 documents...")
@@ -63,6 +64,7 @@ class Database():
             oldest_docs = self.mongo_collection.find().sort("_id", 1).limit(5)
             ids_to_delete = [doc["_id"] for doc in oldest_docs]
 
+            print(f"IDs to delete: {ids_to_delete}")
             # Delete the oldest documents
             self.mongo_collection.delete_many({"_id": {"$in": ids_to_delete}})
         
@@ -76,7 +78,7 @@ class Database():
         # Query MongoDB using the handle to find the profile
         result = self.mongo_collection.find_one({"handle": handle})
 
-
+        print("Result Database:", result)
         if result:
             # Extract the relevant data and return the specified structure
             profile_data = result.get(handle)  # Since handle is used as the key
