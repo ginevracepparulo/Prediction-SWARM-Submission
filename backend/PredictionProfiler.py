@@ -8,7 +8,11 @@ import os
 from .Database import Database
 from dotenv import load_dotenv
 import logging
-load_dotenv()  
+dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
+loaded = load_dotenv(dotenv_path=dotenv_path)
+if not loaded:
+     # Fallback in case it's mounted at root instead
+     load_dotenv()
 
 logger = logging.getLogger("app")
 
