@@ -43,11 +43,11 @@ class PredictionProfiler:
         response = db.select_profile(handle)
         logger.info(f"Profile found: {response}")
 
-        if response.count==None:
+        if response==None:
             logger.info(f"Profile not found in the database for {handle}")
             profile = None
         else: 
-            profile = response.data[0]
+            profile = response
             logger.info(f"Profile found in the database for {handle}: {profile}")
         
         # If profile is found, return it
@@ -62,7 +62,7 @@ class PredictionProfiler:
             # Save the new profile to the database
             response = db.insert_profile(profile)
 
-            if len(response.data)==1:
+            if response.inserted_id:
                 logger.info(f"Profile inserted into the database for {handle}: {profile}")
             else:
                 logger.info(f"Profile not inserted into the database for {handle}: {profile}")
