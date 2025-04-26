@@ -3,13 +3,13 @@ import os
 from dotenv import load_dotenv
 import pymongo
 import sys
-
+import logging
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
 if not loaded:
      # Fallback in case it's mounted at root instead
      load_dotenv()
-
+logger = logging.getLogger("app")
 # url = os.environ.get("SUPABASE_URL")
 # key = os.environ.get("SUPABASE_KEY")
 
@@ -76,9 +76,10 @@ class Database():
 
     def select_profile(self, handle):
         # Query MongoDB using the handle to find the profile
+        logger.info("Runninhg select_profile")
         result = self.mongo_collection.find_one({"handle": handle})
 
-        print("Result Database:", result)
+        logger.info(f"result {result}")
         if result:
             # Extract the relevant data and return the specified structure
             profile_data = result.get(handle)  # Since handle is used as the key
