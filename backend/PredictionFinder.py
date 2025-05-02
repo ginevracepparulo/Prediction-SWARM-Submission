@@ -107,7 +107,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
                 response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
 
-                logger.info("response", response)
+                logger.info(f"response: {response}")
                 response.raise_for_status()
                 data = response.json()
                 tweets_ls = data.get("miner_tweets", [])
