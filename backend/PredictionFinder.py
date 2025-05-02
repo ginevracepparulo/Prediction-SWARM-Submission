@@ -101,7 +101,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
             "Authorization": self.datura_api_key,
             "Content-Type": "application/json"
         }
-        logger.info("api_key", self.datura_api_key)
+        logger.info(f"api_key: {self.datura_api_key}")
         for attempt in range(max_retries):
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
