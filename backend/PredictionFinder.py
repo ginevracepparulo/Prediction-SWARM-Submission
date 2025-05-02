@@ -81,6 +81,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
     async def get_tweets(self, user_prompt: str, min_likes: int = 0, count: int = 100, max_retries = 5) -> List[Dict]:
         #Fetch tweets from Datura API based on the user prompt.
 
+        url = "https://apis.datura.ai/desearch/ai/search/links/twitter"
         payload = {
             "prompt": user_prompt,
             "model": "HORIZON",
@@ -105,7 +106,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         for attempt in range(max_retries):
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
-                response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
+                response = await asyncio.to_thread(requests.post, url=url, json=payload, headers=headers)
 
                 logger.info(f"response: {response}")
                 response.raise_for_status()
