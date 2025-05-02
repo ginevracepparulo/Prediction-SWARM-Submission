@@ -1,0 +1,11 @@
+version: '3.8'  
+
+services:
+  streamlit_app:
+    build: .
+    image: your-image-name:latest
+    container_name: your-container-name
+    ports:
+      - "8501:8501"  # Map host port 8080 to container port 80
+    env_file:
+      - .env
