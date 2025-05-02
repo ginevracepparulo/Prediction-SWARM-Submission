@@ -6,11 +6,13 @@ import os
 import asyncio
 from dotenv import load_dotenv
 import requests
+import logging
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
 if not loaded:
      # Fallback in case it's mounted at root instead
      load_dotenv() 
+logger = logging.getLogger("app")
 
 # Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
@@ -104,6 +106,8 @@ Now, given the following user prompt, generate a properly formatted Datura API q
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
                 response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
+
+                logger.info("response", response)
                 response.raise_for_status()
                 data = response.json()
                 tweets_ls = data.get("miner_tweets", [])
@@ -114,11 +118,14 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 
             except requests.exceptions.RequestException as e:
                 print(f"❌ Attempt {attempt + 1} failed: {e}")
+                logger.info(f"❌ Attempt {attempt + 1} failed: {e}")
                 if attempt == max_retries-1:
                     print("🚫 Max retries reached. Returning error.")
+                    logger.info("🚫 Max retries reached. Returning error.")
                     return []
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
+            logger.info(f"Attempt {attempt + 1} failed. Retrying...")
             await asyncio.sleep(2)
         
         print("🚫 Max retries reached. Returning error.")

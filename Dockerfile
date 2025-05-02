@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./frontend ./frontend
 COPY ./backend ./backend
 
-COPY ./devcontainer ./devcontainer
+COPY ./.devcontainer ./.devcontainer
 
 EXPOSE 8501
 
