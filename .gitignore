@@ -1,3 +1,6 @@
 /streamlit-venv
 .env
 backend/mongodb.py
+build
+dist
+SwarmcentsApp.spec
