@@ -1,6 +1,7 @@
 import streamlit.web.cli 
 import sys
 import os
+import subprocess
 
 # Get the directory of the entry point script (the project root)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,4 +26,4 @@ if __name__ == "__main__":
 
     # Simulate running 'streamlit run frontend/app.py'
     sys.argv = ["streamlit", "run", streamlit_app_path]
-    sys.exit(streamlit.web.cli._main_run()) 
+    subprocess.run(["streamlit", "run", streamlit_app_path])
