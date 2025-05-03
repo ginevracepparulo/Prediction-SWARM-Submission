@@ -4,7 +4,11 @@ import os
 import subprocess
 
 # Get the directory of the entry point script (the project root)
-current_dir = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    current_dir = sys._MEIPASS
+else:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
 print(f"Current Directory: {current_dir}")
 # Add both the frontend and backend directories to the Python path
 frontend_dir = os.path.join(current_dir, "frontend")
