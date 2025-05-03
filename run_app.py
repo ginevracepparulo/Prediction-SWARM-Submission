@@ -26,4 +26,4 @@ if __name__ == "__main__":
 
     # Simulate running 'streamlit run frontend/app.py'
     sys.argv = ["streamlit", "run", streamlit_app_path]
-    subprocess.run(["streamlit", "run", streamlit_app_path])
+    subprocess.run(["streamlit", "run", streamlit_app_path]) 
