@@ -1,4 +1,5 @@
 from .AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, verify_prediction_wrapper, calculate_credibility_scores_batch_wrapper
+from frontend.progress_bar import  progress_manager
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
@@ -100,34 +101,36 @@ async def run_prediction_analysis(text_messages):
         return response.chat_message.content
 """
 
-async def run_prediction_analysis(text_messages, progress_callback=None):
+async def run_prediction_analysis(text_messages):
     current_messages = text_messages[:]
     cancellation_token = CancellationToken()
 
-    if progress_callback:
-        progress_callback(5, "🔄 Starting analysis...")
+    # if progress_callback:
+    #     progress_callback(5, "🔄 Starting analysis...")
 
     # Track progress stages
-    total_steps = 5  # Adjust based on typical execution flow
-    current_step = 0
+    # total_steps = 5  # Adjust based on typical execution flow
+    # current_step = 0
 
     while True:
         try:
-           # Update progress for model thinking step
-            current_step += 1
-            if progress_callback:
-                progress_value = min(95, (current_step / total_steps) * 100)
+           # Update progress for model thinking step          
+            # if progress_callback:
+            #     progress_value = min(95, (1 / total_steps) * 100)
+            #     progress_callback(int(progress_value), "🔍 Analyzing your request...")
+            # if progress_callback:
+            #     progress_value = min(95, (current_step / total_steps) * 100)
                 
-                if current_step == 1:
-                    progress_callback(int(progress_value), "🔍 Analyzing your request...")
-                elif current_step == 2:
-                    progress_callback(int(progress_value), "📚 Retrieving information...")
-                elif current_step == 3:
-                    progress_callback(int(progress_value), "🧮 Processing data...")
-                elif current_step == 4:
-                    progress_callback(int(progress_value), "💭 Formulating response...")
-                else:
-                    progress_callback(int(progress_value), "📝 Finalizing results...")
+            #     if current_step == 1:
+            #         progress_callback(int(progress_value), "🔍 Analyzing your request...")
+            #     elif current_step == 2:
+            #         progress_callback(int(progress_value), "📚 Retrieving information...")
+            #     elif current_step == 3:
+            #         progress_callback(int(progress_value), "🧮 Processing data...")
+            #     elif current_step == 4:
+            #         progress_callback(int(progress_value), "💭 Formulating response...")
+            #     else:
+            #         progress_callback(int(progress_value), "📝 Finalizing results...")
 
             response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
 
@@ -147,9 +150,9 @@ async def run_prediction_analysis(text_messages, progress_callback=None):
                 continue
             
             # Update to 100% when complete
-            if progress_callback:
-                progress_callback(100, "✅ Analysis complete!")
-                
+            if not progress_manager.current_callback:
+                progress_manager.current_callback(100, "✅ Analysis complete!")
+
             # Safe return
             if isinstance(response.chat_message, BaseMessage):
                 return response.chat_message.content

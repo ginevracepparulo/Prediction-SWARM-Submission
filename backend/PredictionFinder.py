@@ -1,5 +1,6 @@
 import json
 from typing import List, Dict, Tuple
+from frontend.progress_bar import progress_manager
 import requests
 import re
 import os
@@ -224,17 +225,26 @@ Ensure the response is **valid JSON** with no additional text.
         # Get tweets
         tweets = await self.get_tweets(user_prompt)
         
+        if not progress_manager.current_callback:
+            progress_manager.current_callback(40, "📚 Retrieving information...")
+
         if not tweets:
             return {"error": "No tweets found matching the criteria"}
 
         # Process tweets
         hash_dict, username_to_tweet = self.process_tweets(tweets)
 
+        if not progress_manager.current_callback:
+            progress_manager.current_callback(60, "🧮 Processing tweets...")
+
         # Analyze predictions
         prediction_analysis = self.analyze_predictions(username_to_tweet)
 
         # Filter tweets
         filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
+
+        if not progress_manager.current_callback:
+            progress_manager.current_callback(80, "💭 Formulating response...")
 
         # Return as dictionary
         return json.loads(filtered_predictions)

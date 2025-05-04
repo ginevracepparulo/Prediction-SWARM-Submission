@@ -1,5 +1,6 @@
 import streamlit as st
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from .progress_bar import progress_manager
 import os
 import os
 import asyncio
@@ -193,10 +194,10 @@ if prompt:
             try:
                 # Create a progress callback function
                 progress_callback = create_progress_callback(progress_bar, status_text)
-                
+                progress_manager.set_callback(progress_callback)
                 # Pass the truncated message list to your backend
                 # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
-                response = run_async_function(run_prediction_analysis(text_messages_for_agent, progress_callback))
+                response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 # Small delay before removing progress elements
                 time.sleep(0.5)
                 # Clear the progress bar and status text
