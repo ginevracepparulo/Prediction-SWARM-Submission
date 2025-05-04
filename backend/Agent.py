@@ -105,33 +105,8 @@ async def run_prediction_analysis(text_messages):
     current_messages = text_messages[:]
     cancellation_token = CancellationToken()
 
-    # if progress_callback:
-    #     progress_callback(5, "🔄 Starting analysis...")
-
-    # Track progress stages
-    # total_steps = 5  # Adjust based on typical execution flow
-    # current_step = 0
-
     while True:
         try:
-           # Update progress for model thinking step          
-            # if progress_callback:
-            #     progress_value = min(95, (1 / total_steps) * 100)
-            #     progress_callback(int(progress_value), "🔍 Analyzing your request...")
-            # if progress_callback:
-            #     progress_value = min(95, (current_step / total_steps) * 100)
-                
-            #     if current_step == 1:
-            #         progress_callback(int(progress_value), "🔍 Analyzing your request...")
-            #     elif current_step == 2:
-            #         progress_callback(int(progress_value), "📚 Retrieving information...")
-            #     elif current_step == 3:
-            #         progress_callback(int(progress_value), "🧮 Processing data...")
-            #     elif current_step == 4:
-            #         progress_callback(int(progress_value), "💭 Formulating response...")
-            #     else:
-            #         progress_callback(int(progress_value), "📝 Finalizing results...")
-
             response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
 
             # Debug/log

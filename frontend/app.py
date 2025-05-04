@@ -10,24 +10,11 @@ import logging
 import warnings
 from autogen_agentchat.messages import TextMessage
 import threading
-
-import time  # Import time for the simulation of progress
+import time
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
 # --- Configuration ---
-MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
-
-#os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
-#os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
-
-# import toml
-# import os
-
-# # Load secrets from secrets.toml
-# secrets = toml.load("C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\secrets.toml")
-
-# # Set environment variables
-# for key, value in secrets.items():
-#     os.environ[key] = value
+MAX_HISTORY_TURNS = 20  # Keep last 20 pairs (user+assistant) for context
 
 # Add the project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -75,15 +62,15 @@ client = OpenAI(
     api_key=OPEN_AI_KEY
 )
 
-client1  = OpenAIChatCompletionClient(
-    model = MODEL_NAME,
+client1 = OpenAIChatCompletionClient(
+    model=MODEL_NAME,
     base_url=OPEN_AI_URL,
     api_key=OPEN_AI_KEY,
     model_info={
         "family": "gpt-4o",
         "json_output": True,
-        "vision": True,  # This can be kept
-        "function_calling": True,  # This can be kept
+        "vision": True,
+        "function_calling": True,
     }
 )
 
@@ -109,9 +96,8 @@ if st.sidebar.button("🔄 Reset Chat"):
     for key in st.session_state.keys():
         del st.session_state[key]
     # Re-initialize after deleting
-    st.session_state.messages = list(INITIAL_MESSAGE) # Ensure it's a mutable list copy
-    st.rerun() # Force rerun after reset
-
+    st.session_state.messages = list(INITIAL_MESSAGE)  # Ensure it's a mutable list copy
+    st.rerun()  # Force rerun after reset
 
 # Display the chat messages
 if "messages" not in st.session_state:
@@ -135,7 +121,7 @@ def run_async_function(coro):
 
 # Initialize chat messages in session state    
 if "messages" not in st.session_state:
-    st.session_state.messages = list(INITIAL_MESSAGE) # Use list() to ensure mutable copy
+    st.session_state.messages = list(INITIAL_MESSAGE)  # Use list() to ensure mutable copy
 
 # --- Display Chat History ---
 avatar_assistant = None
@@ -152,14 +138,7 @@ if "is_waiting" not in st.session_state:
 prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a response
 prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
-# --- Function to update progress from callback ---
-def create_progress_callback(progress_bar, status_text):
-    def update_progress(progress_value, status_message):
-        progress_bar.progress(progress_value)
-        status_text.text(status_message)
-    return update_progress
-
-# --- Function to simulate progress ---
+# --- Function to update progress from thread with proper context ---
 def update_progress_bar_interruptibly(progress_bar, status_text, stop_event):
     status_messages = {
         5: "🔄 Initializing...",
@@ -169,16 +148,29 @@ def update_progress_bar_interruptibly(progress_bar, status_text, stop_event):
         85: "✍️ Crafting final response..."
     }
 
-    for i in range(101):
-        if stop_event.is_set():
-            break
-
-        progress_bar.progress(i)
-
-        if i in status_messages:
-            status_text.text(status_messages[i])
-
-        time.sleep(0.9)  # adjust this for total duration ~90s
+    # This is critical: we need to capture the current script run context
+    ctx = get_script_run_ctx()
+    
+    def run_with_context():
+        # Apply the captured context to this thread
+        add_script_run_ctx(ctx)
+        
+        # Now we can safely update Streamlit components from this thread
+        for i in range(101):
+            if stop_event.is_set():
+                break
+                
+            progress_bar.progress(i)
+            
+            if i in status_messages:
+                status_text.text(status_messages[i])
+                
+            time.sleep(0.9)  # adjust this for total duration ~90s
+    
+    # Create a thread with the context
+    progress_thread = threading.Thread(target=run_with_context)
+    progress_thread.start()
+    return progress_thread
 
 # --- Handle User Input ---
 if prompt:
@@ -192,14 +184,12 @@ if prompt:
 
     # 2. Prepare the LIMITED history to send to the agent
     # Keep only the last N messages (user + assistant pairs)
-    # Multiply by 2 for pairs, add 1 if you always want the initial system message if any
     history_limit = MAX_HISTORY_TURNS * 2
     limited_history = st.session_state.messages[-history_limit:]
 
     # Convert the LIMITED history to the format expected by your agent
     text_messages_for_agent = [
-        # Assuming TextMessage takes content and source)
-        TextMessage(content=m["content"], source=m["role"]) # Adjust 'role' if it expects 'source' etc.
+        TextMessage(content=m["content"], source=m["role"])
         for m in limited_history
     ]
 
@@ -215,29 +205,31 @@ if prompt:
             status_text = st.empty()
             status_text.text("🔄 Initializing...")
 
+            response = None  # Initialize response variable
+            
             try:
-
                 stop_event = threading.Event()
-
-                # Start background progress thread
-                progress_thread = threading.Thread(
-                    target=update_progress_bar_interruptibly,
-                    args=(progress_bar, status_text, stop_event)
-                )
-                progress_thread.start()
                 
-                # Pass the truncated message list to your backend
+                # Start background progress thread with proper context
+                progress_thread = update_progress_bar_interruptibly(
+                    progress_bar, status_text, stop_event
+                )
+                
+                # Run the prediction analysis in the main thread
                 response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 
-                # Wait for progress thread to finish if it's still running
+                # Signal the progress thread to stop
+                stop_event.set()
+                
+                # Wait for progress thread to finish
                 progress_thread.join()
                 
-                # Ensure progress bar is at 100% when done
+                # Set final progress
                 progress_bar.progress(100)
                 status_text.text("✅ Done!")
                 
                 # Small delay before removing progress elements
-                # time.sleep(0.5)
+                time.sleep(0.5)
                 
                 # Replace placeholder with actual response
                 placeholder.markdown(response)
@@ -247,22 +239,23 @@ if prompt:
                 status_text.empty()
 
             except Exception as e:
+                # Signal the progress thread to stop if it's running
+                if 'stop_event' in locals():
+                    stop_event.set()
+                    if 'progress_thread' in locals():
+                        progress_thread.join()
+                
                 st.error(f"An error occurred: {e}")
                 response = "Sorry, I encountered an error." # Provide a fallback response
                 placeholder.markdown(response)
-                print("AN EXCEPTION OCCURED", e)
-                #st.session_state.clear()
-                #st.rerun()
+                print("AN EXCEPTION OCCURRED", e)
+                
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()
 
-
     # 4. Append assistant response to FULL history (for display)
     st.session_state.messages.append({"role": "assistant", "content": response})
-
-    # 5. Optional: Rerun to ensure the latest message is displayed immediately if needed
-    # st.rerun() # Usually not needed as Streamlit handles updates, but can force it.
 
     # --- Reset waiting flag ---
     st.session_state.is_waiting = False
