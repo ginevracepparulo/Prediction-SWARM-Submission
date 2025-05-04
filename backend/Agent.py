@@ -150,7 +150,7 @@ async def run_prediction_analysis(text_messages):
                 continue
             
             # Update to 100% when complete
-            logging.info(f"run prediction analysis callback: {progress_manager.get_callback}")
+            logging.info(f"run prediction analysis callback: {progress_manager.get_callback()}")
             if progress_manager.current_callback:
                 progress_manager.current_callback(100, "✅ Analysis complete!")
 
