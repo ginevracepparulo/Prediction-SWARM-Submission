@@ -9,7 +9,6 @@ from openai import OpenAI
 import logging
 import warnings
 from autogen_agentchat.messages import TextMessage
-import threading
 import time
 
 # --- Configuration ---
@@ -98,10 +97,11 @@ if st.sidebar.button("🔄 Reset Chat"):
     st.session_state.messages = list(INITIAL_MESSAGE)  # Ensure it's a mutable list copy
     st.rerun()  # Force rerun after reset
 
-# Display the chat messages
+# Initialize chat messages in session state    
 if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
+# --- Helper functions ---
 def run_async_function(coro):
     try:
         loop = asyncio.get_running_loop()
@@ -118,17 +118,17 @@ def run_async_function(coro):
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
-# Initialize session state values
-if "messages" not in st.session_state:
-    st.session_state.messages = list(INITIAL_MESSAGE)  # Use list() to ensure mutable copy
-if "progress_value" not in st.session_state:
-    st.session_state.progress_value = 0
-if "status_message" not in st.session_state:
-    st.session_state.status_message = ""
-if "is_waiting" not in st.session_state:
-    st.session_state.is_waiting = False
-if "last_progress_update" not in st.session_state:
-    st.session_state.last_progress_update = 0
+# --- Process state tracking ---
+if "processing_state" not in st.session_state:
+    st.session_state.processing_state = {
+        "is_processing": False,
+        "current_step": 0,
+        "total_steps": 5,
+        "user_input": None,
+        "response": None,
+        "error": None,
+        "start_time": None
+    }
 
 # --- Display Chat History ---
 avatar_assistant = None
@@ -137,153 +137,150 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=avatar_assistant if message["role"] == "assistant" else avatar_user):
         st.markdown(message["content"])
 
-# --- Handle User Input ---
-prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a response
-prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
+# --- Define status messages for each step ---
+status_messages = [
+    "🔄 Initializing...",
+    "🔍 Searching for predictions...",
+    "📊 Analyzing market data...",
+    "💡 Generating insights...",
+    "✍️ Crafting final response..."
+]
 
-# --- Handle Progress Simulation ---
-# This runs completely in the background without updating UI directly
-def simulate_progress_in_background(stop_event):
-    status_messages = {
-        5: "🔄 Initializing...",
-        15: "🔍 Searching for predictions...",
-        40: "📊 Analyzing market data...",
-        65: "💡 Generating insights...",
-        85: "✍️ Crafting final response..."
-    }
+# --- Handle processing state ---
+if st.session_state.processing_state["is_processing"]:
+    # Display the user's message
+    if st.session_state.processing_state["user_input"]:
+        # Only show if we haven't added it to messages yet
+        if len(st.session_state.messages) == 0 or st.session_state.messages[-1]["role"] != "user" or st.session_state.messages[-1]["content"] != st.session_state.processing_state["user_input"]:
+            st.session_state.messages.append({"role": "user", "content": st.session_state.processing_state["user_input"]})
+            with st.chat_message("user", avatar=avatar_user):
+                st.markdown(st.session_state.processing_state["user_input"])
     
-    # Store progress in thread-safe variables
-    progress = {"value": 0, "message": "🔄 Initializing..."}
-    
-    # Update the session state in the main thread via this dictionary
-    # We're not doing UI updates here!
-    for i in range(101):
-        if stop_event.is_set():
-            break
-            
-        # Update our local progress state
-        progress["value"] = i
-        if i in status_messages:
-            progress["message"] = status_messages[i]
-            
-        # Store progress in a thread-safe manner
-        # Note: We're not updating UI here!
-        st.session_state.progress_value = i
-        st.session_state.status_message = progress["message"]
-        st.session_state.last_progress_update = time.time()
-            
-        time.sleep(0.02)  # Adjust for total duration ~90s
-
-# --- Handle User Input ---
-if prompt:
-    # --- Set waiting flag to True ---
-    st.session_state.is_waiting = True
-    
-    # Reset progress values
-    st.session_state.progress_value = 0
-    st.session_state.status_message = "🔄 Initializing..."
-
-    # 1. Append user message to FULL history (for display)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar=avatar_user):
-        st.markdown(prompt)
-
-    # 2. Prepare the LIMITED history to send to the agent
-    # Keep only the last N messages (user + assistant pairs)
-    history_limit = MAX_HISTORY_TURNS * 2
-    limited_history = st.session_state.messages[-history_limit:]
-
-    # Convert the LIMITED history to the format expected by your agent
-    text_messages_for_agent = [
-        TextMessage(content=m["content"], source=m["role"])
-        for m in limited_history
-    ]
-
-    # 3. Call the agent with the LIMITED history
+    # Show the assistant is responding
     with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
         placeholder.markdown("Thinking...")
         status_container = st.container()
-
+        
         with status_container:
-            # Create a progress bar and status text - these will be updated by rerunning
+            # Create a progress bar
             progress_bar = st.progress(0)
             status_text = st.empty()
-            status_text.text("🔄 Initializing...")
             
-            try:
-                stop_event = threading.Event()
+            # Create text messages for the agent
+            if st.session_state.processing_state["current_step"] == 0:
+                # First step - prepare the messages
+                history_limit = MAX_HISTORY_TURNS * 2
+                limited_history = st.session_state.messages[-history_limit:]
                 
-                # Start background thread - doesn't update UI directly
-                progress_thread = threading.Thread(
-                    target=simulate_progress_in_background,
-                    args=(stop_event,)
-                )
-                progress_thread.daemon = True  # Make thread daemon so it exits when main thread exits
-                progress_thread.start()
+                text_messages_for_agent = [
+                    TextMessage(content=m["content"], source=m["role"])
+                    for m in limited_history
+                ]
                 
-                # NEW APPROACH - poll for progress updates with rerun
-                # Create a placeholder for a timestamp
-                start_time = time.time()
+                # Store in session state for next steps
+                st.session_state.processing_state["agent_messages"] = text_messages_for_agent
+            
+            # Update progress based on current step
+            current_step = st.session_state.processing_state["current_step"]
+            total_steps = st.session_state.processing_state["total_steps"]
+            
+            # Calculate progress percentage
+            progress_pct = int((current_step / total_steps) * 100)
+            progress_bar.progress(progress_pct)
+            
+            # Update status message
+            if current_step < len(status_messages):
+                status_text.text(status_messages[current_step])
+            else:
+                status_text.text("Almost there...")
+            
+            # Execute the appropriate step based on current_step
+            if current_step == 0:
+                # Initialization step - just advance to next step
+                st.session_state.processing_state["current_step"] = 1
+                st.rerun()
                 
-                # Call agent for response
-                response = run_async_function(run_prediction_analysis(text_messages_for_agent))
+            elif current_step < 4:
+                # Intermediate steps - simulate processing
+                time.sleep(1)  # Simulate work
+                st.session_state.processing_state["current_step"] += 1
+                st.rerun()
                 
-                # Signal the progress thread to stop
-                stop_event.set()
-                if progress_thread.is_alive():
-                    progress_thread.join(timeout=1.0)  # Wait up to 1 second for thread to finish
-                
-                # Set final progress
-                st.session_state.progress_value = 100
-                st.session_state.status_message = "✅ Done!"
-                progress_bar.progress(100)
-                status_text.text("✅ Done!")
-                
-                # Small delay before showing response
-                time.sleep(0.5)
-                
-                # Replace placeholder with actual response
-                placeholder.markdown(response)
+            elif current_step == 4:
+                # Final step - actually call the agent
+                try:
+                    response = run_async_function(run_prediction_analysis(
+                        st.session_state.processing_state["agent_messages"]
+                    ))
+                    
+                    # Store the response
+                    st.session_state.processing_state["response"] = response
+                    st.session_state.processing_state["current_step"] += 1
+                    
+                    # Set final progress
+                    progress_bar.progress(100)
+                    status_text.text("✅ Done!")
+                    
+                    # Replace placeholder with actual response
+                    placeholder.markdown(response)
+                    
+                    # Add to messages
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    
+                    # Reset processing state
+                    st.session_state.processing_state = {
+                        "is_processing": False,
+                        "current_step": 0,
+                        "total_steps": 5,
+                        "user_input": None,
+                        "response": None,
+                        "error": None,
+                        "start_time": None
+                    }
+                    
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
+                    error_response = "Sorry, I encountered an error."
+                    
+                    # Store the error
+                    st.session_state.processing_state["error"] = str(e)
+                    st.session_state.processing_state["response"] = error_response
+                    
+                    # Replace placeholder with error message
+                    placeholder.markdown(error_response)
+                    
+                    # Add to messages
+                    st.session_state.messages.append({"role": "assistant", "content": error_response})
+                    
+                    # Reset processing state
+                    st.session_state.processing_state = {
+                        "is_processing": False,
+                        "current_step": 0,
+                        "total_steps": 5,
+                        "user_input": None,
+                        "response": None,
+                        "error": None,
+                        "start_time": None
+                    }
                 
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()
-                
-                # Add response to messages
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                
-                # Reset waiting flag
-                st.session_state.is_waiting = False
 
-            except Exception as e:
-                # Signal the progress thread to stop
-                stop_event.set()
-                if 'progress_thread' in locals() and progress_thread.is_alive():
-                    progress_thread.join(timeout=1.0)
-                
-                st.error(f"An error occurred: {e}")
-                response = "Sorry, I encountered an error." # Provide a fallback response
-                placeholder.markdown(response)
-                print("AN EXCEPTION OCCURRED", e)
-                
-                # Clear the progress elements
-                progress_bar.empty()
-                status_text.empty()
-                
-                # Add error response to messages
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                
-                # Reset waiting flag
-                st.session_state.is_waiting = False
+# --- Handle User Input ---
+prompt_disabled = st.session_state.processing_state["is_processing"]
+prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
-# Add auto-rerun for progress updates during waiting state
-if st.session_state.is_waiting:
-    # Check if we need to update the UI based on progress changes
-    current_time = time.time()
-    last_update = st.session_state.last_progress_update
-    
-    # Only rerun if there was a recent progress update (within last 2 seconds)
-    if current_time - last_update < 2.0:
-        time.sleep(0.1)  # Small delay to prevent too frequent reruns
-        st.rerun()
+if prompt and not st.session_state.processing_state["is_processing"]:
+    # Start processing
+    st.session_state.processing_state = {
+        "is_processing": True,
+        "current_step": 0,
+        "total_steps": 5,
+        "user_input": prompt,
+        "response": None,
+        "error": None,
+        "start_time": time.time()
+    }
+    st.rerun()
