@@ -165,7 +165,7 @@ def update_progress_bar_interruptibly(progress_bar, status_text, stop_event):
             if i in status_messages:
                 status_text.text(status_messages[i])
                 
-            time.sleep(0.9)  # adjust this for total duration ~90s
+            time.sleep(0.02)  # adjust this for total duration ~1s
     
     # Create a thread with the context
     progress_thread = threading.Thread(target=run_with_context)
