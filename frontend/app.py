@@ -158,13 +158,10 @@ def create_progress_callback(progress_bar, status_text):
         status_text.text(status_message)
     return update_progress
 
-
-
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
     st.session_state.is_waiting = True
-
 
     # 1. Append user message to FULL history (for display)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -205,17 +202,14 @@ if prompt:
                 # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 logging.info(f"Progress callback set after {progress_manager.get_callback()}")
-                while progress_manager.process_updates() > 0:
-                    time.sleep(0.1)
                 # Small delay before removing progress elements
-
+                time.sleep(0.5)
                 # Clear the progress bar and status text
                 placeholder.markdown(response)
 
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()
-                
 
             except Exception as e:
                 st.error(f"An error occurred: {e}")
@@ -227,7 +221,6 @@ if prompt:
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()
-                
 
 
     # 4. Append assistant response to FULL history (for display)
@@ -238,4 +231,3 @@ if prompt:
 
     # --- Reset waiting flag ---
     st.session_state.is_waiting = False
-
