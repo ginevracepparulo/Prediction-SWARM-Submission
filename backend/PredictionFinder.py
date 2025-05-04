@@ -10,7 +10,7 @@ import requests
 import logging
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
-print("loaded", loaded)
+print("loaded app", loaded)
 if not loaded:
      # Fallback in case it's mounted at root instead
      load_dotenv() 
