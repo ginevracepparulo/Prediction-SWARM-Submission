@@ -150,9 +150,9 @@ async def run_prediction_analysis(text_messages):
                 continue
             
             # Update to 100% when complete
-            logging.info(f"run prediction analysis callback: {progress_manager.get_callback()}")
-            if progress_manager.get_callback():
-                progress_manager.update_progress(100, "✅ Analysis complete!")
+            # logging.info(f"run prediction analysis callback: {progress_manager.get_callback()}")
+            # if progress_manager.get_callback():
+            #     progress_manager.update_progress(100, "✅ Analysis complete!")
 
             # Safe return
             if isinstance(response.chat_message, BaseMessage):

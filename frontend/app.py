@@ -158,6 +158,25 @@ def create_progress_callback(progress_bar, status_text):
         status_text.text(status_message)
     return update_progress
 
+# --- Function to simulate progress ---
+def update_progress_bar(progress_bar, status_text):
+    # This is where you'd update based on actual progress if available
+    # For now we'll do a simple simulation
+    for i in range(101):
+        # Update progress bar
+        progress_bar.progress(i)
+        # Update status text for certain milestones
+        if i == 10:
+            status_text.text("🔍 Searching for relevant data...")
+        elif i == 30:
+            status_text.text("📊 Analyzing information...")
+        elif i == 60:
+            status_text.text("💭 Formulating response...")
+        elif i == 90:
+            status_text.text("✏️ Finalizing answer...")
+        # Sleep to simulate work being done
+        time.sleep(0.05)  # Adjust speed as needed
+
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
@@ -194,19 +213,30 @@ if prompt:
             status_text.text("🔄 Initializing...")
 
             try:
-                # Create a progress callback function
-                progress_callback = create_progress_callback(progress_bar, status_text)
-                progress_manager.set_callback(progress_callback)
-                logging.info(f"Progress callback set {progress_manager.get_callback()}")
+                # Start a thread to update the progress bar
+                import threading
+                progress_thread = threading.Thread(
+                    target=update_progress_bar, 
+                    args=(progress_bar, status_text)
+                )
+                progress_thread.start()
+                
                 # Pass the truncated message list to your backend
-                # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 response = run_async_function(run_prediction_analysis(text_messages_for_agent))
-                logging.info(f"Progress callback set after {progress_manager.get_callback()}")
+                
+                # Wait for progress thread to finish if it's still running
+                progress_thread.join(timeout=0.1)
+                
+                # Ensure progress bar is at 100% when done
+                progress_bar.progress(100)
+                status_text.text("✅ Done!")
+                
                 # Small delay before removing progress elements
                 time.sleep(0.5)
-                # Clear the progress bar and status text
+                
+                # Replace placeholder with actual response
                 placeholder.markdown(response)
-
+                
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()

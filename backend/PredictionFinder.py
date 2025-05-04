@@ -228,10 +228,10 @@ Ensure the response is **valid JSON** with no additional text.
         # Get tweets
         tweets = await self.get_tweets(user_prompt)
         
-        if progress_manager.get_callback():
-            logger.info(f"Inside: {progress_manager.get_callback()}")
-            print(f"Inside: {progress_manager.get_callback()}")
-            progress_manager.update_progress(40, "📚 Retrieving information...")
+        # if progress_manager.get_callback():
+        #     logger.info(f"Inside: {progress_manager.get_callback()}")
+        #     print(f"Inside: {progress_manager.get_callback()}")
+        #     progress_manager.update_progress(40, "📚 Retrieving information...")
 
         print("Step 1: Tweets fetched")
         if not tweets:
@@ -240,9 +240,9 @@ Ensure the response is **valid JSON** with no additional text.
         # Process tweets
         hash_dict, username_to_tweet = self.process_tweets(tweets)
 
-        if progress_manager.get_callback():
-            print(f"Inside 2: {progress_manager.get_callback()}")
-            progress_manager.update_progress(60, "🧮 Processing tweets...")
+        # if progress_manager.get_callback():
+        #     print(f"Inside 2: {progress_manager.get_callback()}")
+        #     progress_manager.update_progress(60, "🧮 Processing tweets...")
 
         # Analyze predictions
         prediction_analysis = self.analyze_predictions(username_to_tweet)
@@ -252,9 +252,9 @@ Ensure the response is **valid JSON** with no additional text.
         print("Step 2: Predictions analyzed")
         logger.info(f"Filtered Predictions: {filtered_predictions}")
         print("filtered predictions", filtered_predictions)
-        if progress_manager.get_callback():
-            print(f"Inside 3: {progress_manager.get_callback()}")
-            progress_manager.update_progress(80, "💭 Formulating response...")
+        # if progress_manager.get_callback():
+        #     print(f"Inside 3: {progress_manager.get_callback()}")
+        #     progress_manager.update_progress(80, "💭 Formulating response...")
 
         # Return as dictionary
         return json.loads(filtered_predictions)
