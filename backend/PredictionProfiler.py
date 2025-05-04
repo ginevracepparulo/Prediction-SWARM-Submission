@@ -73,7 +73,7 @@ class PredictionProfiler:
 
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
         print(handle)
-
+        logger.info(handle)
         if handle.startswith("@"):
             handle = handle[1:]
 
@@ -95,6 +95,7 @@ class PredictionProfiler:
                 response.raise_for_status()
                 tweets_ls = response.json()
                 print(len(tweets_ls), "tweets found")
+                logger.info(f"tweets found: {len(tweets_ls)}")
                 if tweets_ls:
                     tweets = [tweet.get("text", "") for tweet in tweets_ls]
                     return {"tweets": tweets}
@@ -103,6 +104,7 @@ class PredictionProfiler:
                 return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": []}
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
+            logger.info(f"Attempt {attempt + 1} failed. Retrying...")
             await asyncio.sleep(2)
         
         return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
@@ -177,7 +179,7 @@ class PredictionProfiler:
                 all_predictions.extend(parsed.get("predictions", []))
             except json.JSONDecodeError as e:
                 print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
-
+                logging.info(f"Failed to parse LLM response for batch {i//batch_size + 1}")
                 # If parsing fails, add "No" for each tweet in the batch as a fallback
                 all_predictions.extend(["No"] * len(batch_tweets))
         
@@ -193,6 +195,7 @@ class PredictionProfiler:
         zipped = list(zip(tweets, outcomes_list))
         filtered_tweets = [tweet for tweet, outcome in zipped if outcome == "Yes"]
         print(f"Filtered {len(filtered_tweets)} prediction tweets from {len(tweets)} total tweets.")
+        logger.info(f"Filtered {len(filtered_tweets)} prediction tweets from {len(tweets)} total tweets.")
         return filtered_tweets
     
     async def analyze_prediction_patterns(self, filtered_tweets: List[str]) -> Dict:
@@ -266,7 +269,7 @@ class PredictionProfiler:
         # Apply filter
         filtered_predictions = await self.apply_filter(user_data["tweets"], prediction_outcomes)
         print("Filtered predictions build profile:", len(filtered_predictions))
-        
+        logging.info(f"Filtered predictions build profile: {len(filtered_predictions)}")
         # Analyze prediction patterns
         analysis = await self.analyze_prediction_patterns(filtered_predictions)
         

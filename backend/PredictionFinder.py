@@ -105,6 +105,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         for attempt in range(max_retries):
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
+                logger.info(f"🔁 Attempt {attempt + 1} to fetch tweets...")
                 response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
 
                 logger.info(f"response: {response}")
@@ -113,6 +114,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 tweets_ls = data.get("miner_tweets", [])
                 #print(tweets_ls)
                 #print(len(tweets_ls), "tweets found")
+                logger.info(f"tweets found: {len(tweets_ls)}")
                 if len(tweets_ls) > 0:
                     return tweets_ls
                 
@@ -129,6 +131,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
             await asyncio.sleep(2)
         
         print("🚫 Max retries reached. Returning error.")
+        logger.info("🚫 Max retries reached. Returning error.")
         return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
 
     def process_tweets(self, tweets: List[Dict]) -> Tuple[Dict, Dict]:
@@ -217,7 +220,7 @@ Ensure the response is **valid JSON** with no additional text.
         """Main method to find predictions based on user prompt."""
 
         print(f"Generated Search Query: {user_prompt}")
-        
+        logger.info(f"Generated Search Query: {user_prompt}")
         # Get tweets
         tweets = await self.get_tweets(user_prompt)
         

@@ -6,6 +6,7 @@ import os
 from datura_py import Datura
 import time
 from dotenv import load_dotenv
+import logging
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
 if not loaded:
@@ -39,6 +40,7 @@ class PredictionVerifier:
             data = response.json()
             # print("Google data", data)
             print("Capturing the data", data.get("data", []))
+            logging.info(f"Google API response: {data}")
             return data.get("items", [])[:2]
         
         return []
@@ -101,13 +103,13 @@ class PredictionVerifier:
                 data = result.get("data", [])
 
                 print(f"Attempt {attempt}: Captured data ->", data)
-
+                logging.info(f"Attempt {attempt}: Datura API response: {data}")
                 if data:  # If we got results, return them
                     return data
 
             except Exception as e:
                 print(f"Attempt {attempt} failed with error: {e}")
-
+                logging.error(f"Attempt {attempt} failed with error: {e}")
             # If we're not on the last attempt, wait and retry
             if attempt < max_retries:
                 time.sleep(delay)
@@ -115,6 +117,7 @@ class PredictionVerifier:
 
         # After all retries fail
         print("All attempts failed. Returning empty list.")
+        logging.info("All attempts failed. Returning empty list.")
         return []
 
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
@@ -124,6 +127,7 @@ class PredictionVerifier:
         )
 
         print("Okay analyze_verification")
+        logging.info("Analyzing verification for prediction:")
         system_prompt = """
         You are an AI analyst verifying predictions for Polymarket, a prediction market where users bet on real-world outcomes. Your task is to classify claims as TRUE, FALSE, or UNCERTAIN *only when evidence is insufficient*.
 
@@ -192,7 +196,7 @@ class PredictionVerifier:
         search_query = self.generate_search_query(prediction_query)
         # search_query = prediction_query
         print(f"Generated Search Query: {search_query}")
-        
+        logging.info(f"Generated Search Query: {search_query}")
         # Fetch news articles
         articles = self.fetch_news_articles(search_query)
         # print("articles", articles)
@@ -218,9 +222,11 @@ class PredictionVerifier:
             }
         # print("articles", articles)
         print("all_sources", len(all_sources))
+        logging.info(f"Total sources found: {len(all_sources)}")
         # Analyze verification
         verification_data = self.analyze_verification(prediction_query, all_sources)
         print("Final result")
+        logging.info("Final result")
         # Final result
         final_result = {
             "result": verification_data["result"],
