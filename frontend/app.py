@@ -4,7 +4,7 @@ import sys
 import os
 # Removed the duplicate sys.path.append, assuming the first one is correct
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.progress_bar import progress_manager # Keep if used elsewhere, removed in the thread function
+# from utils.progress_bar import progress_manager # Keep if used elsewhere, removed in the thread function
 import asyncio
 from openai import OpenAI
 import logging
