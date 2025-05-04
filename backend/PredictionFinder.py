@@ -225,7 +225,7 @@ Ensure the response is **valid JSON** with no additional text.
         # Get tweets
         tweets = await self.get_tweets(user_prompt)
         
-        if not progress_manager.current_callback:
+        if progress_manager.current_callback:
             progress_manager.current_callback(40, "📚 Retrieving information...")
 
         if not tweets:
@@ -234,7 +234,7 @@ Ensure the response is **valid JSON** with no additional text.
         # Process tweets
         hash_dict, username_to_tweet = self.process_tweets(tweets)
 
-        if not progress_manager.current_callback:
+        if progress_manager.current_callback:
             progress_manager.current_callback(60, "🧮 Processing tweets...")
 
         # Analyze predictions
@@ -243,7 +243,7 @@ Ensure the response is **valid JSON** with no additional text.
         # Filter tweets
         filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
 
-        if not progress_manager.current_callback:
+        if progress_manager.current_callback:
             progress_manager.current_callback(80, "💭 Formulating response...")
 
         # Return as dictionary
