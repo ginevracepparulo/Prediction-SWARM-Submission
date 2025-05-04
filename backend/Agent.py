@@ -1,5 +1,5 @@
 from .AutogenWrappers import find_predictions_wrapper, build_profiles_wrapper, verify_prediction_wrapper, calculate_credibility_scores_batch_wrapper
-from frontend.progress_bar import  progress_manager
+from utils.progress_bar import  progress_manager
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken

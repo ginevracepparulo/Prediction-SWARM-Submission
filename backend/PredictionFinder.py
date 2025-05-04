@@ -1,6 +1,6 @@
 import json
 from typing import List, Dict, Tuple
-from frontend.progress_bar import progress_manager
+from utils.progress_bar import progress_manager
 import requests
 import re
 import os

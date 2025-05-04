@@ -1,6 +1,6 @@
 import streamlit as st
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from progress_bar import progress_manager
+from utils.progress_bar import progress_manager
 import os
 import os
 import asyncio
