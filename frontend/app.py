@@ -9,6 +9,7 @@ from openai import OpenAI
 import logging
 import warnings
 from autogen_agentchat.messages import TextMessage
+import threading
 
 import time  # Import time for the simulation of progress
 
@@ -159,23 +160,25 @@ def create_progress_callback(progress_bar, status_text):
     return update_progress
 
 # --- Function to simulate progress ---
-def update_progress_bar(progress_bar, status_text):
-    # This is where you'd update based on actual progress if available
-    # For now we'll do a simple simulation
+def update_progress_bar_interruptibly(progress_bar, status_text, stop_event):
+    status_messages = {
+        5: "🔄 Initializing...",
+        15: "🔍 Searching for predictions...",
+        40: "📊 Analyzing market data...",
+        65: "💡 Generating insights...",
+        85: "✍️ Crafting final response..."
+    }
+
     for i in range(101):
-        # Update progress bar
+        if stop_event.is_set():
+            break
+
         progress_bar.progress(i)
-        # Update status text for certain milestones
-        if i == 10:
-            status_text.text("🔍 Searching for relevant data...")
-        elif i == 30:
-            status_text.text("📊 Analyzing information...")
-        elif i == 60:
-            status_text.text("💭 Formulating response...")
-        elif i == 90:
-            status_text.text("✏️ Finalizing answer...")
-        # Sleep to simulate work being done
-        time.sleep(0.05)  # Adjust speed as needed
+
+        if i in status_messages:
+            status_text.text(status_messages[i])
+
+        time.sleep(0.9)  # adjust this for total duration ~90s
 
 # --- Handle User Input ---
 if prompt:
@@ -213,11 +216,13 @@ if prompt:
             status_text.text("🔄 Initializing...")
 
             try:
-                # Start a thread to update the progress bar
-                import threading
+
+                stop_event = threading.Event()
+
+                # Start background progress thread
                 progress_thread = threading.Thread(
-                    target=update_progress_bar, 
-                    args=(progress_bar, status_text)
+                    target=update_progress_bar_interruptibly,
+                    args=(progress_bar, status_text, stop_event)
                 )
                 progress_thread.start()
                 
@@ -225,14 +230,14 @@ if prompt:
                 response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 
                 # Wait for progress thread to finish if it's still running
-                progress_thread.join(timeout=0.1)
+                progress_thread.join()
                 
                 # Ensure progress bar is at 100% when done
                 progress_bar.progress(100)
                 status_text.text("✅ Done!")
                 
                 # Small delay before removing progress elements
-                time.sleep(0.5)
+                # time.sleep(0.5)
                 
                 # Replace placeholder with actual response
                 placeholder.markdown(response)
