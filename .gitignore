@@ -4,3 +4,4 @@ backend/mongodb.py
 build
 dist
 SwarmcentsApp.spec
+inno_script.iss
