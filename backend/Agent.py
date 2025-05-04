@@ -100,12 +100,35 @@ async def run_prediction_analysis(text_messages):
         return response.chat_message.content
 """
 
-async def run_prediction_analysis(text_messages):
+async def run_prediction_analysis(text_messages, progress_callback=None):
     current_messages = text_messages[:]
     cancellation_token = CancellationToken()
 
+    if progress_callback:
+        progress_callback(5, "🔄 Starting analysis...")
+
+    # Track progress stages
+    total_steps = 5  # Adjust based on typical execution flow
+    current_step = 0
+
     while True:
         try:
+           # Update progress for model thinking step
+            current_step += 1
+            if progress_callback:
+                progress_value = min(95, (current_step / total_steps) * 100)
+                
+                if current_step == 1:
+                    progress_callback(int(progress_value), "🔍 Analyzing your request...")
+                elif current_step == 2:
+                    progress_callback(int(progress_value), "📚 Retrieving information...")
+                elif current_step == 3:
+                    progress_callback(int(progress_value), "🧮 Processing data...")
+                elif current_step == 4:
+                    progress_callback(int(progress_value), "💭 Formulating response...")
+                else:
+                    progress_callback(int(progress_value), "📝 Finalizing results...")
+
             response = await assistant.on_messages(current_messages, cancellation_token=cancellation_token)
 
             # Debug/log
@@ -123,6 +146,10 @@ async def run_prediction_analysis(text_messages):
             if hasattr(response.chat_message, "tool_calls") and response.chat_message.tool_calls:
                 continue
             
+            # Update to 100% when complete
+            if progress_callback:
+                progress_callback(100, "✅ Analysis complete!")
+                
             # Safe return
             if isinstance(response.chat_message, BaseMessage):
                 return response.chat_message.content

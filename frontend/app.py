@@ -7,6 +7,7 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
+import time  # Import time for the simulation of progress
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
@@ -147,6 +148,13 @@ if "is_waiting" not in st.session_state:
 prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a response
 prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
+# --- Function to update progress from callback ---
+def create_progress_callback(progress_bar, status_text):
+    def update_progress(progress_value, status_message):
+        progress_bar.progress(progress_value)
+        status_text.text(status_message)
+    return update_progress
+
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
@@ -174,17 +182,40 @@ if prompt:
     with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
         placeholder.markdown("Thinking...")
-        try:
-            # Pass the truncated message list to your backend
-            response = run_async_function(run_prediction_analysis(text_messages_for_agent))
-            placeholder.markdown(response)
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-            response = "Sorry, I encountered an error." # Provide a fallback response
-            placeholder.markdown(response)
-            print("AN EXCEPTION OCCURED", e)
-            #st.session_state.clear()
-            #st.rerun()
+        status_container = st.container()
+
+        with status_container:
+            # Create a progress bar
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            status_text.text("🔄 Initializing...")
+
+            try:
+                # Create a progress callback function
+                progress_callback = create_progress_callback(progress_bar, status_text)
+                
+                # Pass the truncated message list to your backend
+                response = run_async_function(run_prediction_analysis(text_messages_for_agent))
+
+                # Small delay before removing progress elements
+                time.sleep(0.5)
+                # Clear the progress bar and status text
+                placeholder.markdown(response)
+
+                # Clear the progress elements
+                progress_bar.empty()
+                status_text.empty()
+
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+                response = "Sorry, I encountered an error." # Provide a fallback response
+                placeholder.markdown(response)
+                print("AN EXCEPTION OCCURED", e)
+                #st.session_state.clear()
+                #st.rerun()
+                # Clear the progress elements
+                progress_bar.empty()
+                status_text.empty()
 
 
     # 4. Append assistant response to FULL history (for display)
