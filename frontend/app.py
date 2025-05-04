@@ -5,6 +5,7 @@ import os
 import os
 import asyncio
 from openai import OpenAI
+import logging
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
@@ -195,6 +196,7 @@ if prompt:
                 # Create a progress callback function
                 progress_callback = create_progress_callback(progress_bar, status_text)
                 progress_manager.set_callback(progress_callback)
+                logging.info(f"Progress callback set.", progress_manager.current_callback)
                 # Pass the truncated message list to your backend
                 # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 response = run_async_function(run_prediction_analysis(text_messages_for_agent))
