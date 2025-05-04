@@ -10,6 +10,7 @@ import requests
 import logging
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
+print("loaded", loaded)
 if not loaded:
      # Fallback in case it's mounted at root instead
      load_dotenv() 
@@ -68,7 +69,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         #    }
 
         #completion = requests.post(url, json=payload, headers=headers)
-
+        
         completion = self.groq_client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
@@ -103,6 +104,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
             "Content-Type": "application/json"
         }
         logger.info(f"api_key: {self.datura_api_key}")
+        print("datura api key", self.datura_api_key)
         for attempt in range(max_retries):
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
