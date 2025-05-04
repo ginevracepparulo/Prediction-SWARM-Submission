@@ -11,7 +11,6 @@ import warnings
 from autogen_agentchat.messages import TextMessage
 import threading
 import time
-from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 20  # Keep last 20 pairs (user+assistant) for context
@@ -119,9 +118,17 @@ def run_async_function(coro):
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
-# Initialize chat messages in session state    
+# Initialize session state values
 if "messages" not in st.session_state:
     st.session_state.messages = list(INITIAL_MESSAGE)  # Use list() to ensure mutable copy
+if "progress_value" not in st.session_state:
+    st.session_state.progress_value = 0
+if "status_message" not in st.session_state:
+    st.session_state.status_message = ""
+if "is_waiting" not in st.session_state:
+    st.session_state.is_waiting = False
+if "last_progress_update" not in st.session_state:
+    st.session_state.last_progress_update = 0
 
 # --- Display Chat History ---
 avatar_assistant = None
@@ -130,16 +137,13 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=avatar_assistant if message["role"] == "assistant" else avatar_user):
         st.markdown(message["content"])
 
-# --- Add a flag in session state to prevent double input ---
-if "is_waiting" not in st.session_state:
-    st.session_state.is_waiting = False
-
 # --- Handle User Input ---
 prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a response
 prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
-# --- Function to update progress from thread with proper context ---
-def update_progress_bar_interruptibly(progress_bar, status_text, stop_event):
+# --- Handle Progress Simulation ---
+# This runs completely in the background without updating UI directly
+def simulate_progress_in_background(stop_event):
     status_messages = {
         5: "🔄 Initializing...",
         15: "🔍 Searching for predictions...",
@@ -147,35 +151,37 @@ def update_progress_bar_interruptibly(progress_bar, status_text, stop_event):
         65: "💡 Generating insights...",
         85: "✍️ Crafting final response..."
     }
-
-    # This is critical: we need to capture the current script run context
-    ctx = get_script_run_ctx()
     
-    def run_with_context():
-        # Apply the captured context to this thread
-        add_script_run_ctx(ctx)
-        
-        # Now we can safely update Streamlit components from this thread
-        for i in range(101):
-            if stop_event.is_set():
-                break
-                
-            progress_bar.progress(i)
+    # Store progress in thread-safe variables
+    progress = {"value": 0, "message": "🔄 Initializing..."}
+    
+    # Update the session state in the main thread via this dictionary
+    # We're not doing UI updates here!
+    for i in range(101):
+        if stop_event.is_set():
+            break
             
-            if i in status_messages:
-                status_text.text(status_messages[i])
-                
-            time.sleep(0.02)  # adjust this for total duration ~1s
-    
-    # Create a thread with the context
-    progress_thread = threading.Thread(target=run_with_context)
-    progress_thread.start()
-    return progress_thread
+        # Update our local progress state
+        progress["value"] = i
+        if i in status_messages:
+            progress["message"] = status_messages[i]
+            
+        # Store progress in a thread-safe manner
+        # Note: We're not updating UI here!
+        st.session_state.progress_value = i
+        st.session_state.status_message = progress["message"]
+        st.session_state.last_progress_update = time.time()
+            
+        time.sleep(0.9)  # Adjust for total duration ~90s
 
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
     st.session_state.is_waiting = True
+    
+    # Reset progress values
+    st.session_state.progress_value = 0
+    st.session_state.status_message = "🔄 Initializing..."
 
     # 1. Append user message to FULL history (for display)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -200,35 +206,41 @@ if prompt:
         status_container = st.container()
 
         with status_container:
-            # Create a progress bar
+            # Create a progress bar and status text - these will be updated by rerunning
             progress_bar = st.progress(0)
             status_text = st.empty()
             status_text.text("🔄 Initializing...")
-
-            response = None  # Initialize response variable
             
             try:
                 stop_event = threading.Event()
                 
-                # Start background progress thread with proper context
-                progress_thread = update_progress_bar_interruptibly(
-                    progress_bar, status_text, stop_event
+                # Start background thread - doesn't update UI directly
+                progress_thread = threading.Thread(
+                    target=simulate_progress_in_background,
+                    args=(stop_event,)
                 )
+                progress_thread.daemon = True  # Make thread daemon so it exits when main thread exits
+                progress_thread.start()
                 
-                # Run the prediction analysis in the main thread
+                # NEW APPROACH - poll for progress updates with rerun
+                # Create a placeholder for a timestamp
+                start_time = time.time()
+                
+                # Call agent for response
                 response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 
                 # Signal the progress thread to stop
                 stop_event.set()
-                
-                # Wait for progress thread to finish
-                progress_thread.join()
+                if progress_thread.is_alive():
+                    progress_thread.join(timeout=1.0)  # Wait up to 1 second for thread to finish
                 
                 # Set final progress
+                st.session_state.progress_value = 100
+                st.session_state.status_message = "✅ Done!"
                 progress_bar.progress(100)
                 status_text.text("✅ Done!")
                 
-                # Small delay before removing progress elements
+                # Small delay before showing response
                 time.sleep(0.5)
                 
                 # Replace placeholder with actual response
@@ -237,13 +249,18 @@ if prompt:
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()
+                
+                # Add response to messages
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                
+                # Reset waiting flag
+                st.session_state.is_waiting = False
 
             except Exception as e:
-                # Signal the progress thread to stop if it's running
-                if 'stop_event' in locals():
-                    stop_event.set()
-                    if 'progress_thread' in locals():
-                        progress_thread.join()
+                # Signal the progress thread to stop
+                stop_event.set()
+                if 'progress_thread' in locals() and progress_thread.is_alive():
+                    progress_thread.join(timeout=1.0)
                 
                 st.error(f"An error occurred: {e}")
                 response = "Sorry, I encountered an error." # Provide a fallback response
@@ -253,9 +270,20 @@ if prompt:
                 # Clear the progress elements
                 progress_bar.empty()
                 status_text.empty()
+                
+                # Add error response to messages
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                
+                # Reset waiting flag
+                st.session_state.is_waiting = False
 
-    # 4. Append assistant response to FULL history (for display)
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-    # --- Reset waiting flag ---
-    st.session_state.is_waiting = False
+# Add auto-rerun for progress updates during waiting state
+if st.session_state.is_waiting:
+    # Check if we need to update the UI based on progress changes
+    current_time = time.time()
+    last_update = st.session_state.last_progress_update
+    
+    # Only rerun if there was a recent progress update (within last 2 seconds)
+    if current_time - last_update < 2.0:
+        time.sleep(0.1)  # Small delay to prevent too frequent reruns
+        st.rerun()
