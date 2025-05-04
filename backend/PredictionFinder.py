@@ -107,7 +107,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         print("datura api key", self.datura_api_key)
         for attempt in range(max_retries):
             try:
-                #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
+                print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
                 logger.info(f"🔁 Attempt {attempt + 1} to fetch tweets...")
                 response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
 
@@ -116,7 +116,7 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 data = response.json()
                 tweets_ls = data.get("miner_tweets", [])
                 #print(tweets_ls)
-                #print(len(tweets_ls), "tweets found")
+                print(len(tweets_ls), "tweets found")
                 logger.info(f"tweets found: {len(tweets_ls)}")
                 if len(tweets_ls) > 0:
                     return tweets_ls
@@ -223,15 +223,17 @@ Ensure the response is **valid JSON** with no additional text.
         """Main method to find predictions based on user prompt."""
 
         print(f"Generated Search Query: {user_prompt}")
-        logger.info(f"Value of : {progress_manager.current_callback}")
+        logger.info(f"Value of : {progress_manager.get_callback()}")
         logger.info(f"Generated Search Query: {user_prompt}")
         # Get tweets
         tweets = await self.get_tweets(user_prompt)
         
         if progress_manager.get_callback():
             logger.info(f"Inside: {progress_manager.get_callback()}")
+            print(f"Inside: {progress_manager.get_callback()}")
             progress_manager.update_progress(40, "📚 Retrieving information...")
 
+        print("Step 1: Tweets fetched")
         if not tweets:
             return {"error": "No tweets found matching the criteria"}
 
@@ -239,6 +241,7 @@ Ensure the response is **valid JSON** with no additional text.
         hash_dict, username_to_tweet = self.process_tweets(tweets)
 
         if progress_manager.get_callback():
+            print(f"Inside 2: {progress_manager.get_callback()}")
             progress_manager.update_progress(60, "🧮 Processing tweets...")
 
         # Analyze predictions
@@ -246,8 +249,11 @@ Ensure the response is **valid JSON** with no additional text.
 
         # Filter tweets
         filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
-
+        print("Step 2: Predictions analyzed")
+        logger.info(f"Filtered Predictions: {filtered_predictions}")
+        print("filtered predictions", filtered_predictions)
         if progress_manager.get_callback():
+            print(f"Inside 3: {progress_manager.get_callback()}")
             progress_manager.update_progress(80, "💭 Formulating response...")
 
         # Return as dictionary
