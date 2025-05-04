@@ -152,51 +152,19 @@ prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a 
 prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
 # --- Function to update progress from callback ---
-# def create_progress_callback(progress_bar, status_text):
-#     def update_progress(progress_value, status_message):
-#         progress_bar.progress(progress_value)
-#         status_text.text(status_message)
-#     return update_progress
-# Add this right before your st.chat_input or in another appropriate place
-# This ensures we process updates regularly while waiting for user input
-if "progress_checker" not in st.session_state:
-    st.session_state.progress_checker = None
+def create_progress_callback(progress_bar, status_text):
+    def update_progress(progress_value, status_message):
+        progress_bar.progress(progress_value)
+        status_text.text(status_message)
+    return update_progress
 
-def setup_progress_checker():
-    """Start a background progress checker"""
-    if st.session_state.progress_checker is None:
-        st.session_state.progress_checker = True
-        st.rerun()
 
-# Process updates every 100ms
-if st.session_state.progress_checker:
-    placeholder = st.empty()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    # Create a progress callback function that is safe to call from any thread
-    def create_progress_callback(progress_bar, status_text):
-        def update_progress(progress_value, status_message):
-            progress_bar.progress(progress_value)  # Convert to 0-1 range
-            status_text.text(status_message)
-        return update_progress
-    
-    # Set the callback
-    progress_callback = create_progress_callback(progress_bar, status_text)
-    progress_manager.set_callback(progress_callback)
-    
-    # Function to be called when we're done with the progress bar
-    def clear_progress():
-        progress_bar.empty()
-        status_text.empty()
-        placeholder.empty()
-        st.session_state.progress_checker = None
 
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
     st.session_state.is_waiting = True
-    setup_progress_checker()  # Start the progress checker
+
 
     # 1. Append user message to FULL history (for display)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -230,8 +198,8 @@ if prompt:
 
             try:
                 # Create a progress callback function
-                # progress_callback = create_progress_callback(progress_bar, status_text)
-                # progress_manager.set_callback(progress_callback)
+                progress_callback = create_progress_callback(progress_bar, status_text)
+                progress_manager.set_callback(progress_callback)
                 logging.info(f"Progress callback set {progress_manager.get_callback()}")
                 # Pass the truncated message list to your backend
                 # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
@@ -245,9 +213,9 @@ if prompt:
                 placeholder.markdown(response)
 
                 # Clear the progress elements
-                # progress_bar.empty()
-                # status_text.empty()
-                clear_progress()
+                progress_bar.empty()
+                status_text.empty()
+                
 
             except Exception as e:
                 st.error(f"An error occurred: {e}")
@@ -257,9 +225,9 @@ if prompt:
                 #st.session_state.clear()
                 #st.rerun()
                 # Clear the progress elements
-                # progress_bar.empty()
-                # status_text.empty()
-                clear_progress()
+                progress_bar.empty()
+                status_text.empty()
+                
 
 
     # 4. Append assistant response to FULL history (for display)
@@ -271,16 +239,3 @@ if prompt:
     # --- Reset waiting flag ---
     st.session_state.is_waiting = False
 
-# Add a separate function to periodically check for updates
-# This ensures progress updates are processed even while waiting for the backend
-def check_progress_updates():
-    """Check for progress updates and process them"""
-    if st.session_state.progress_checker:
-        # Process any queued updates
-        progress_manager.process_updates()
-        # Schedule the next check
-        st.rerun()
-
-# Call this function to start the periodic checking
-if st.session_state.progress_checker:
-    check_progress_updates()        
