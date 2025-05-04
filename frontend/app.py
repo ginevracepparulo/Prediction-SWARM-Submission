@@ -1,14 +1,15 @@
 import streamlit as st
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+import sys 
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.progress_bar import progress_manager
-import os
-import os
 import asyncio
 from openai import OpenAI
 import logging
 import warnings
 from autogen_agentchat.messages import TextMessage
-import sys 
+
 import time  # Import time for the simulation of progress
 
 # --- Configuration ---
