@@ -221,6 +221,7 @@ Ensure the response is **valid JSON** with no additional text.
         """Main method to find predictions based on user prompt."""
 
         print(f"Generated Search Query: {user_prompt}")
+        logger.info(f"Value of : {progress_manager.current_callback}")
         logger.info(f"Generated Search Query: {user_prompt}")
         # Get tweets
         tweets = await self.get_tweets(user_prompt)
