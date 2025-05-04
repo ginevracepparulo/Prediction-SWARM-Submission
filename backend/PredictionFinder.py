@@ -226,6 +226,7 @@ Ensure the response is **valid JSON** with no additional text.
         tweets = await self.get_tweets(user_prompt)
         
         if progress_manager.current_callback:
+            logger.info(f"Inside: {progress_manager.current_callback}")
             progress_manager.current_callback(40, "📚 Retrieving information...")
 
         if not tweets:
