@@ -172,7 +172,7 @@ def simulate_progress_in_background(stop_event):
         st.session_state.status_message = progress["message"]
         st.session_state.last_progress_update = time.time()
             
-        time.sleep(0.9)  # Adjust for total duration ~90s
+        time.sleep(0.02)  # Adjust for total duration ~90s
 
 # --- Handle User Input ---
 if prompt:
