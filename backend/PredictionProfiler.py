@@ -46,16 +46,18 @@ class PredictionProfiler:
 
         if response==None:
             logger(f"Profile not found in the database for {handle}")
+            print(f"Profile not found in the database for {handle}")
             profile = None
         else: 
             profile = response
             logger.info(f"Profile found in the database for {handle}: {profile}")
-        
+            print(f"Profile found in the database for {handle}: {profile}")
         # If profile is found, return it
         if profile:
             return profile
         
         logger.info(f"Profile not found in the database for {handle}. Building profile...")
+        print(f"Profile not found in the database for {handle}. Building profile...")
         # If not found, build the user profile
         profile = await self.build_profile(handle)
         
@@ -259,7 +261,7 @@ class PredictionProfiler:
         """Main method to build a predictor's profile."""
         # Get user tweets
         user_data = await self.build_user_profile(handle)
-        
+        print("Got user data")
         if "error" in user_data:
             return {"error": user_data["error"]}
         

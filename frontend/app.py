@@ -140,20 +140,24 @@ prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 response_holder = {"text": "Thinking..."}
 
 def progress_thread_func(progress_bar, status_text):
-    ctx = get_script_run_ctx()
-    add_script_run_ctx(Thread.current_thread(), ctx)
+    # ctx = get_script_run_ctx()
+    # add_script_run_ctx(Thread.current_thread(), ctx)
 
     for i in range(101):
-        progress_bar.progress(i)
+        
         if i == 10:
+            progress_bar.progress(i)
             status_text.text("🔍 Searching for relevant data...")
         elif i == 30:
+            progress_bar.progress(i)
             status_text.text("📊 Analyzing information...")
         elif i == 60:
+            progress_bar.progress(i)
             status_text.text("💭 Formulating response...")
-        elif i == 90:
+        elif i >= 90:
+            progress_bar.progress(90)
             status_text.text("✏️ Finalizing answer...")
-        time.sleep(0.05)
+        time.sleep(0.03)
 
 def agent_thread_func(history, holder):
     try:
@@ -213,8 +217,13 @@ if prompt:
                 agent_thread.join()
                 progress_thread.join()
 
+
+                # Ensure progress bar is at 100% when done
+                progress_bar.progress(100)
+                status_text.text("✅ Done!")
+
                 # Pass the truncated message list to your backend
-                response = run_async_function(run_prediction_analysis(text_messages_for_agent))
+                # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 # placeholder.markdown(response)
                 placeholder.markdown(response_holder["text"])
                 # Clear the progress elements
@@ -233,7 +242,7 @@ if prompt:
 
 
     # 4. Append assistant response to FULL history (for display)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.session_state.messages.append({"role": "assistant", "content": response_holder["text"]})
 
     # 5. Optional: Rerun to ensure the latest message is displayed immediately if needed
     # st.rerun() # Usually not needed as Streamlit handles updates, but can force it.
