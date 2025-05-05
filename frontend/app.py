@@ -161,7 +161,7 @@ class AsyncProgressManager:
             if self.current_progress in self.status_messages:
                 self.status_text.text(self.status_messages[self.current_progress])
                 
-            await asyncio.sleep(0.3)  # Non-blocking sleep
+            await asyncio.sleep(0.6)  # Non-blocking sleep
             self.current_progress += 1
             
             # Cap at 95% while waiting for actual completion
