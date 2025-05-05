@@ -227,10 +227,12 @@ if prompt:
 
 
                 # Ensure progress bar is at 100% when done
-                time.sleep(3)  # Small delay to ensure UI updates
+                # time.sleep(0.5)  # Small delay to ensure UI updates
                 progress_bar.progress(100)
                 status_text.text("✅ Done!")
 
+                # Small delay before removing progress elements
+                time.sleep(0.5)
                 # Pass the truncated message list to your backend
                 # response = run_async_function(run_prediction_analysis(text_messages_for_agent))
                 # placeholder.markdown(response)
