@@ -158,7 +158,7 @@ def progress_thread_func(progress_bar, status_text, stop_event):
         elif i >= 90:
             progress_bar.progress(90)
             status_text.text("✏️ Finalizing answer...")
-        time.sleep(0.9)
+        time.sleep(0.3)
 
 def agent_thread_func(history, holder):
     try:
