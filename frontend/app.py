@@ -1,21 +1,28 @@
 import streamlit as st
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-import sys 
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.progress_bar import progress_manager
+import os
 import asyncio
 from openai import OpenAI
-import logging
 import warnings
 from autogen_agentchat.messages import TextMessage
-import threading
-import time
-from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-import concurrent.futures
+import sys 
 
 # --- Configuration ---
-MAX_HISTORY_TURNS = 20  # Keep last 20 pairs (user+assistant) for context
+MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
+
+#os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
+#os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
+
+# import toml
+# import os
+
+# # Load secrets from secrets.toml
+# secrets = toml.load("C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\secrets.toml")
+
+# # Set environment variables
+# for key, value in secrets.items():
+#     os.environ[key] = value
 
 # Add the project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -63,15 +70,15 @@ client = OpenAI(
     api_key=OPEN_AI_KEY
 )
 
-client1 = OpenAIChatCompletionClient(
-    model=MODEL_NAME,
+client1  = OpenAIChatCompletionClient(
+    model = MODEL_NAME,
     base_url=OPEN_AI_URL,
     api_key=OPEN_AI_KEY,
     model_info={
         "family": "gpt-4o",
         "json_output": True,
-        "vision": True,
-        "function_calling": True,
+        "vision": True,  # This can be kept
+        "function_calling": True,  # This can be kept
     }
 )
 
@@ -97,41 +104,33 @@ if st.sidebar.button("🔄 Reset Chat"):
     for key in st.session_state.keys():
         del st.session_state[key]
     # Re-initialize after deleting
-    st.session_state.messages = list(INITIAL_MESSAGE)  # Ensure it's a mutable list copy
-    st.rerun()  # Force rerun after reset
+    st.session_state.messages = list(INITIAL_MESSAGE) # Ensure it's a mutable list copy
+    st.rerun() # Force rerun after reset
+
 
 # Display the chat messages
 if "messages" not in st.session_state:
     st.session_state.messages = INITIAL_MESSAGE
 
-# --- Async Utils ---
-async def run_async_task(coro):
-    """Run an async coroutine and return its result."""
-    return await coro
-
 def run_async_function(coro):
-    """Execute an async function from a synchronous context safely."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(coro)
-    finally:
-        # Clean up pending tasks to prevent "Task was destroyed but it is pending" warnings
-        pending_tasks = asyncio.all_tasks(loop)
-        for task in pending_tasks:
-            task.cancel()
-        
-        if pending_tasks:
-            # Run the loop one more time to process cancellations
-            loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
-        
-        # Clean up async generators
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(coro)
+        return loop.run_until_complete(task)
+    except RuntimeError:
+        # No running loop, so create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            # Clean up any lingering async generators
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
 # Initialize chat messages in session state    
 if "messages" not in st.session_state:
-    st.session_state.messages = list(INITIAL_MESSAGE)  # Use list() to ensure mutable copy
+    st.session_state.messages = list(INITIAL_MESSAGE) # Use list() to ensure mutable copy
 
 # --- Display Chat History ---
 avatar_assistant = None
@@ -148,115 +147,6 @@ if "is_waiting" not in st.session_state:
 prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a response
 prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
-# --- Improved Progress Bar Manager ---
-class AsyncProgressManager:
-    def __init__(self, progress_bar, status_text):
-        self.progress_bar = progress_bar
-        self.status_text = status_text
-        self.should_stop = False
-        self.current_progress = 0
-        self.ctx = get_script_run_ctx()
-        self.status_messages = {
-            5: "🔄 Initializing...",
-            15: "🔍 Searching for predictions...",
-            40: "📊 Analyzing market data...",
-            65: "💡 Generating insights...",
-            85: "✍️ Crafting final response..."
-        }
-        
-    async def update_progress(self):
-        add_script_run_ctx(self.ctx)
-        while not self.should_stop and self.current_progress <= 100:
-            self.progress_bar.progress(self.current_progress)
-            
-            if self.current_progress in self.status_messages:
-                self.status_text.text(self.status_messages[self.current_progress])
-                
-            await asyncio.sleep(0.9)  # Non-blocking sleep
-            self.current_progress += 1
-            
-            # Cap at 95% while waiting for actual completion
-            if self.current_progress > 95:
-                self.current_progress = 95
-                
-    def complete(self):
-        self.should_stop = True
-        self.progress_bar.progress(100)
-        self.status_text.text("✅ Done!")
-        
-    def error(self):
-        self.should_stop = True
-        self.status_text.text("❌ Error occurred")
-
-# --- Combined Analysis and Progress Function ---
-async def run_analysis_with_progress(text_messages, progress_bar, status_text):
-    """Run the analysis and update progress simultaneously."""
-    # Create progress manager
-    progress_mgr = AsyncProgressManager(progress_bar, status_text)
-    progress_task = None
-    
-    try:
-        # Start progress updates in a separate task
-        progress_task = asyncio.create_task(progress_mgr.update_progress())
-        
-        # Create a separate synchronous function to run the prediction analysis
-        def run_prediction_safely():
-            try:
-                # Create a new event loop for this thread
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                
-                # Run the analysis in this new loop
-                result = new_loop.run_until_complete(run_prediction_analysis(text_messages))
-                
-                # Clean up
-                new_loop.run_until_complete(new_loop.shutdown_asyncgens())
-                new_loop.close()
-                
-                return result
-            except Exception as e:
-                print(f"Analysis error: {e}")
-                return f"Sorry, an error occurred: {str(e)}"
-        
-        # Run in executor to avoid blocking the main thread
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            response_future = pool.submit(run_prediction_safely)
-            response = response_future.result()  # This blocks, but progress updates still happen
-        
-        # Mark progress as complete
-        progress_mgr.complete()
-        
-        # Ensure the progress task is properly cancelled
-        return response
-        
-    except Exception as e:
-        progress_mgr.error()
-        print(f"Exception in run_analysis_with_progress: {e}")
-        return f"Sorry, I encountered an error: {str(e)}"
-        
-    finally:
-        # Always ensure the progress task is properly cleaned up
-        if progress_task and not progress_task.done():
-            progress_task.cancel()
-            
-            # We need to run the event loop briefly to process the cancellation
-            try:
-                # Get current running loop
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # If we're already in a running loop, we can create a future and await it
-                    fut = asyncio.shield(progress_task)
-                    try:
-                        loop.call_soon(fut.cancel)
-                    except:
-                        pass
-                else:
-                    # Otherwise, run the loop until the task is cancelled
-                    loop.run_until_complete(asyncio.wait([progress_task], timeout=0.1))
-            except Exception as cancel_error:
-                print(f"Error during task cleanup: {cancel_error}")
-                # Just continue if there's an error during cleanup
-
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
@@ -269,12 +159,14 @@ if prompt:
 
     # 2. Prepare the LIMITED history to send to the agent
     # Keep only the last N messages (user + assistant pairs)
+    # Multiply by 2 for pairs, add 1 if you always want the initial system message if any
     history_limit = MAX_HISTORY_TURNS * 2
     limited_history = st.session_state.messages[-history_limit:]
 
     # Convert the LIMITED history to the format expected by your agent
     text_messages_for_agent = [
-        TextMessage(content=m["content"], source=m["role"])
+        # Assuming TextMessage takes content and source)
+        TextMessage(content=m["content"], source=m["role"]) # Adjust 'role' if it expects 'source' etc.
         for m in limited_history
     ]
 
@@ -282,73 +174,24 @@ if prompt:
     with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
         placeholder.markdown("Thinking...")
-        status_container = st.container()
+        try:
+            # Pass the truncated message list to your backend
+            response = run_async_function(run_prediction_analysis(text_messages_for_agent))
+            placeholder.markdown(response)
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+            response = "Sorry, I encountered an error." # Provide a fallback response
+            placeholder.markdown(response)
+            print("AN EXCEPTION OCCURED", e)
+            #st.session_state.clear()
+            #st.rerun()
 
-        with status_container:
-            # Create a progress bar
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            status_text.text("🔄 Initializing...")
-
-            response = None  # Initialize response variable
-            
-            try:
-                # Create a new event loop for this main thread operation
-                main_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(main_loop)
-
-                # Use the improved combined function with proper error handling
-                try:
-                    response = main_loop.run_until_complete(
-                        run_analysis_with_progress(
-                            text_messages_for_agent, 
-                            progress_bar, 
-                            status_text
-                        )
-                    )
-                finally:
-                    # Clean up any pending tasks
-                    try:
-                        remaining_tasks = asyncio.all_tasks(main_loop)
-                        if remaining_tasks:
-                            # Use a short timeout to avoid hanging
-                            gather_future = asyncio.gather(*remaining_tasks)
-                            main_loop.call_soon_threadsafe(gather_future.cancel)
-                            main_loop.run_until_complete(
-                                main_loop.shutdown_asyncgens()
-                            )
-                    except Exception as cleanup_error:
-                        print(f"Error during event loop cleanup: {cleanup_error}")
-                    
-                    # Close the loop
-                    main_loop.close()
-                
-                # Ensure we have a response even if something went wrong
-                if not response:
-                    response = "Sorry, I couldn't generate a proper response."
-                
-                # Small delay before removing progress elements
-                time.sleep(0.5)
-                
-                # Replace placeholder with actual response
-                placeholder.markdown(response)
-                
-                # Clear the progress elements
-                progress_bar.empty()
-                status_text.empty()
-
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-                response = "Sorry, I encountered an error." # Provide a fallback response
-                placeholder.markdown(response)
-                print("AN EXCEPTION OCCURRED", e)
-                
-                # Clear the progress elements
-                progress_bar.empty()
-                status_text.empty()
 
     # 4. Append assistant response to FULL history (for display)
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # 5. Optional: Rerun to ensure the latest message is displayed immediately if needed
+    # st.rerun() # Usually not needed as Streamlit handles updates, but can force it.
 
     # --- Reset waiting flag ---
     st.session_state.is_waiting = False
