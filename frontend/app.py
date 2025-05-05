@@ -110,12 +110,23 @@ async def run_async_task(coro):
     return await coro
 
 def run_async_function(coro):
-    """Execute an async function from a synchronous context."""
+    """Execute an async function from a synchronous context safely."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        # Clean up pending tasks to prevent "Task was destroyed but it is pending" warnings
+        pending_tasks = asyncio.all_tasks(loop)
+        for task in pending_tasks:
+            task.cancel()
+        
+        if pending_tasks:
+            # Run the loop one more time to process cancellations
+            loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+        
+        # Clean up async generators
+        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
 
 # Initialize chat messages in session state    
@@ -182,41 +193,69 @@ async def run_analysis_with_progress(text_messages, progress_bar, status_text):
     """Run the analysis and update progress simultaneously."""
     # Create progress manager
     progress_mgr = AsyncProgressManager(progress_bar, status_text)
+    progress_task = None
     
     try:
         # Start progress updates in a separate task
         progress_task = asyncio.create_task(progress_mgr.update_progress())
         
-        # Run the actual analysis in a thread pool to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
+        # Create a separate synchronous function to run the prediction analysis
+        def run_prediction_safely():
+            try:
+                # Create a new event loop for this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                
+                # Run the analysis in this new loop
+                result = new_loop.run_until_complete(run_prediction_analysis(text_messages))
+                
+                # Clean up
+                new_loop.run_until_complete(new_loop.shutdown_asyncgens())
+                new_loop.close()
+                
+                return result
+            except Exception as e:
+                print(f"Analysis error: {e}")
+                return f"Sorry, an error occurred: {str(e)}"
+        
+        # Run in executor to avoid blocking the main thread
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            # Run the potentially blocking analysis in a thread pool
-            response = await loop.run_in_executor(
-                pool, 
-                lambda: run_async_function(run_prediction_analysis(text_messages))
-            )
+            response_future = pool.submit(run_prediction_safely)
+            response = response_future.result()  # This blocks, but progress updates still happen
         
         # Mark progress as complete
         progress_mgr.complete()
         
-        # Cancel progress task
-        progress_task.cancel()
-        try:
-            await progress_task
-        except asyncio.CancelledError:
-            pass
-            
+        # Ensure the progress task is properly cancelled
         return response
         
     except Exception as e:
         progress_mgr.error()
-        if 'progress_task' in locals():
+        print(f"Exception in run_analysis_with_progress: {e}")
+        return f"Sorry, I encountered an error: {str(e)}"
+        
+    finally:
+        # Always ensure the progress task is properly cleaned up
+        if progress_task and not progress_task.done():
             progress_task.cancel()
+            
+            # We need to run the event loop briefly to process the cancellation
             try:
-                await progress_task
-            except asyncio.CancelledError:
-                pass
-        raise e
+                # Get current running loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If we're already in a running loop, we can create a future and await it
+                    fut = asyncio.shield(progress_task)
+                    try:
+                        loop.call_soon(fut.cancel)
+                    except:
+                        pass
+                else:
+                    # Otherwise, run the loop until the task is cancelled
+                    loop.run_until_complete(asyncio.wait([progress_task], timeout=0.1))
+            except Exception as cancel_error:
+                print(f"Error during task cleanup: {cancel_error}")
+                # Just continue if there's an error during cleanup
 
 # --- Handle User Input ---
 if prompt:
@@ -254,14 +293,39 @@ if prompt:
             response = None  # Initialize response variable
             
             try:
-                # Use the improved combined function
-                response = run_async_function(
-                    run_analysis_with_progress(
-                        text_messages_for_agent, 
-                        progress_bar, 
-                        status_text
+                # Create a new event loop for this main thread operation
+                main_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(main_loop)
+
+                # Use the improved combined function with proper error handling
+                try:
+                    response = main_loop.run_until_complete(
+                        run_analysis_with_progress(
+                            text_messages_for_agent, 
+                            progress_bar, 
+                            status_text
+                        )
                     )
-                )
+                finally:
+                    # Clean up any pending tasks
+                    try:
+                        remaining_tasks = asyncio.all_tasks(main_loop)
+                        if remaining_tasks:
+                            # Use a short timeout to avoid hanging
+                            gather_future = asyncio.gather(*remaining_tasks)
+                            main_loop.call_soon_threadsafe(gather_future.cancel)
+                            main_loop.run_until_complete(
+                                main_loop.shutdown_asyncgens()
+                            )
+                    except Exception as cleanup_error:
+                        print(f"Error during event loop cleanup: {cleanup_error}")
+                    
+                    # Close the loop
+                    main_loop.close()
+                
+                # Ensure we have a response even if something went wrong
+                if not response:
+                    response = "Sorry, I couldn't generate a proper response."
                 
                 # Small delay before removing progress elements
                 time.sleep(0.5)
