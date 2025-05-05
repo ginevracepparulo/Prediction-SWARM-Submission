@@ -7,22 +7,12 @@ from openai import OpenAI
 import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
+import time
+from threading import Thread
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
-
-#os.environ["AUTOGEN_DEBUG"] = "0"  # Basic debug info
-#os.environ["AUTOGEN_VERBOSE"] = "0"  # More detailed logging
-
-# import toml
-# import os
-
-# # Load secrets from secrets.toml
-# secrets = toml.load("C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\secrets.toml")
-
-# # Set environment variables
-# for key, value in secrets.items():
-#     os.environ[key] = value
 
 # Add the project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -147,6 +137,33 @@ if "is_waiting" not in st.session_state:
 prompt_disabled = st.session_state.is_waiting  # Disable input if waiting for a response
 prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
+response_holder = {"text": "Thinking..."}
+
+def progress_thread_func(progress_bar, status_text):
+    ctx = get_script_run_ctx()
+    add_script_run_ctx(Thread.current_thread(), ctx)
+
+    for i in range(101):
+        progress_bar.progress(i)
+        if i == 10:
+            status_text.text("🔍 Searching for relevant data...")
+        elif i == 30:
+            status_text.text("📊 Analyzing information...")
+        elif i == 60:
+            status_text.text("💭 Formulating response...")
+        elif i == 90:
+            status_text.text("✏️ Finalizing answer...")
+        time.sleep(0.05)
+
+def agent_thread_func(history, holder):
+    try:
+        response = run_async_function(run_prediction_analysis(history))
+    except Exception as e:
+        print("AN EXCEPTION OCCURRED", e)
+        response = "Sorry, I encountered an error."
+    holder["text"] = response
+
+
 # --- Handle User Input ---
 if prompt:
     # --- Set waiting flag to True ---
@@ -174,17 +191,45 @@ if prompt:
     with st.chat_message("assistant", avatar=avatar_assistant):
         placeholder = st.empty()
         placeholder.markdown("Thinking...")
-        try:
-            # Pass the truncated message list to your backend
-            response = run_async_function(run_prediction_analysis(text_messages_for_agent))
-            placeholder.markdown(response)
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-            response = "Sorry, I encountered an error." # Provide a fallback response
-            placeholder.markdown(response)
-            print("AN EXCEPTION OCCURED", e)
-            #st.session_state.clear()
-            #st.rerun()
+
+        status_container = st.container()
+        with status_container:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            status_text.text("🔄 Initializing...")
+            try:
+
+                # Start progress bar thread
+                progress_thread = Thread(target=progress_thread_func, args=(progress_bar, status_text))
+                add_script_run_ctx(progress_thread, get_script_run_ctx())
+                progress_thread.start()
+
+
+                # Start agent processing thread
+                agent_thread = Thread(target=agent_thread_func, args=(text_messages_for_agent, response_holder))
+                agent_thread.start()
+
+                # Wait for agent response
+                agent_thread.join()
+                progress_thread.join()
+
+                # Pass the truncated message list to your backend
+                response = run_async_function(run_prediction_analysis(text_messages_for_agent))
+                # placeholder.markdown(response)
+                placeholder.markdown(response_holder["text"])
+                # Clear the progress elements
+                progress_bar.empty()
+                status_text.empty()
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+                response = "Sorry, I encountered an error." # Provide a fallback response
+                placeholder.markdown(response)
+                print("AN EXCEPTION OCCURED", e)
+                #st.session_state.clear()
+                #st.rerun()
+                # Clear the progress elements
+                progress_bar.empty()
+                status_text.empty()
 
 
     # 4. Append assistant response to FULL history (for display)
