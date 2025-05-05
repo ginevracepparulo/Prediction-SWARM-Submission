@@ -260,6 +260,7 @@ class PredictionProfiler:
     async def build_profile(self, handle: str) -> Dict:
         """Main method to build a predictor's profile."""
         # Get user tweets
+        print("Inside build profile")
         user_data = await self.build_user_profile(handle)
         print("Got user data")
         if "error" in user_data:

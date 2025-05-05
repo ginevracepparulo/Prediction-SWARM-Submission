@@ -968,7 +968,7 @@ if __name__ == "__main__":
     print("User: Hello")
     print()
     # response = asyncio.run(run_prediction_analysis("Given me historical profile for @Polymarket"))
-    response = asyncio.run(run_prediction_analysis("Given me predictions on wether Trump will be able to acquire Greenland or not"))
+    response = asyncio.run(run_prediction_analysis("Given me historical profile for @elonmusk"))
     # print("Response from prediction analysis:")
     print(response)
 
