@@ -8,7 +8,7 @@ import warnings
 from autogen_agentchat.messages import TextMessage
 import sys 
 import time
-from threading import Thread
+from threading import Thread, Event
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
 # --- Configuration ---
@@ -139,25 +139,26 @@ prompt = st.chat_input("Type your Query", disabled=prompt_disabled)
 
 response_holder = {"text": "Thinking..."}
 
-def progress_thread_func(progress_bar, status_text):
+def progress_thread_func(progress_bar, status_text, stop_event):
     # ctx = get_script_run_ctx()
     # add_script_run_ctx(Thread.current_thread(), ctx)
 
     for i in range(101):
-        
+        if stop_event.is_set():
+            break  # Stop the thread gracefully when event is set
         if i == 10:
-            progress_bar.progress(i)
+            progress_bar.progress(10)
             status_text.text("🔍 Searching for relevant data...")
         elif i == 30:
-            progress_bar.progress(i)
+            progress_bar.progress(30)
             status_text.text("📊 Analyzing information...")
         elif i == 60:
-            progress_bar.progress(i)
+            progress_bar.progress(60)
             status_text.text("💭 Formulating response...")
         elif i >= 90:
             progress_bar.progress(90)
             status_text.text("✏️ Finalizing answer...")
-        time.sleep(0.03)
+        time.sleep(0.9)
 
 def agent_thread_func(history, holder):
     try:
@@ -203,8 +204,11 @@ if prompt:
             status_text.text("🔄 Initializing...")
             try:
 
+                # Create an event to signal when agent is done
+                stop_event = Event()
+
                 # Start progress bar thread
-                progress_thread = Thread(target=progress_thread_func, args=(progress_bar, status_text))
+                progress_thread = Thread(target=progress_thread_func, args=(progress_bar, status_text, stop_event))
                 add_script_run_ctx(progress_thread, get_script_run_ctx())
                 progress_thread.start()
 
@@ -215,10 +219,15 @@ if prompt:
 
                 # Wait for agent response
                 agent_thread.join()
+
+                # Signal the progress thread to stop
+                stop_event.set()
+
                 progress_thread.join()
 
 
                 # Ensure progress bar is at 100% when done
+                time.sleep(0.5)  # Small delay to ensure UI updates
                 progress_bar.progress(100)
                 status_text.text("✅ Done!")
 
