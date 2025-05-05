@@ -45,7 +45,7 @@ class PredictionProfiler:
         logger.info(f"Profile found: {response}")
 
         if response==None:
-            logger(f"Profile not found in the database for {handle}")
+            logger.info(f"Profile not found in the database for {handle}")
             print(f"Profile not found in the database for {handle}")
             profile = None
         else: 
