@@ -227,7 +227,7 @@ if prompt:
 
 
                 # Ensure progress bar is at 100% when done
-                time.sleep(0.5)  # Small delay to ensure UI updates
+                time.sleep(3)  # Small delay to ensure UI updates
                 progress_bar.progress(100)
                 status_text.text("✅ Done!")
 
