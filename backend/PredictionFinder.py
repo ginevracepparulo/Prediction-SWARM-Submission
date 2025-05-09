@@ -6,7 +6,7 @@ import os
 import asyncio
 import logging
 
-logger = logging.getLogger("prediction_finder")
+logger = logging.getLogger("app")
 
 # Configure the logging system
 logging.basicConfig(level=logging.INFO)
