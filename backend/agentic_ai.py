@@ -35,7 +35,7 @@ GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
 
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-2024-08-06")
-DATURA_API_URL = "https://apis.datura.ai/twitter"
+DATURA_API_URL = "https://apis.datura.ai/desearch/ai/search/links/twitter"
 
 client = OpenAI(
     base_url="https://api.openai.com/v1",
@@ -95,13 +95,11 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         
         return completion.choices[0].message.content.strip()
 
-    async def get_tweets(self, query: str, min_likes: int = 0, count: int = 100, max_retries = 5) -> List[Dict]:
+    async def get_tweets(self, user_prompt: str, min_likes: int = 0, count: int = 100, max_retries = 5) -> List[Dict]:
         #Fetch tweets from Datura API based on the generated query.
 
-        url = "https://apis.datura.ai/desearch/ai/search/links/twitter"
-
         payload = {
-            "prompt": query,
+            "prompt": user_prompt,
             "model": "HORIZON",
             "start_date": "2024-04-10",
             "lang": "en",
@@ -124,9 +122,8 @@ Now, given the following user prompt, generate a properly formatted Datura API q
         for attempt in range(max_retries):
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
-                response = await asyncio.to_thread(requests.post, url=url, json=payload, headers=headers)
+                response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
                 response.raise_for_status()
-                #print("✅ Response received.")
                 data = response.json()
                 tweets_ls = data.get("miner_tweets", [])
                 #print(tweets_ls)
@@ -894,7 +891,7 @@ if __name__ == "__main__":
 
     print("User: Hello")
     print()
-    #response = asyncio.run(run_prediction_analysis("Given me predictions on Will trump lower tariffs on china in april?"))
+    response = asyncio.run(run_prediction_analysis("Give me predictions on Will trump lower tariffs on china in april?"))
 
     # print("Response from prediction analysis:")
     # print(response)
