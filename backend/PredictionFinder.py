@@ -4,6 +4,12 @@ import requests
 import re
 import os
 import asyncio
+import logging
+
+logger = logging.getLogger("prediction_finder")
+
+# Configure the logging system
+logging.basicConfig(level=logging.INFO)
 
 # Initialize environment variables
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
@@ -193,7 +199,10 @@ Ensure the response is **valid JSON** with no additional text.
         
         if not tweets:
             return {"error": "No tweets found matching the criteria"}
-
+        
+        logger.info(f"Fetched {len(tweets)} tweets")
+        logger.info(tweets)
+        
         # Process tweets
         hash_dict, username_to_tweet = self.process_tweets(tweets)
 
