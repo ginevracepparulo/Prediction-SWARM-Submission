@@ -383,4 +383,3 @@ class PredictionProfiler:
         """Calculate credibility scores for multiple users concurrently."""
         tasks = [self.calculate_credibility_score(handle, prediction_verifier) for handle in handles]
         return await asyncio.gather(*tasks)
-

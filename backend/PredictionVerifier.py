@@ -19,7 +19,6 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
 DATURA_API_KEY = os.environ.get("DATURA_API_KEY")
 
 # ============ COMPONENT 3: PREDICTOR VERIFIER ============
-
 class PredictionVerifier:
     """Verifies whether predictions have come true or proven false."""
     
@@ -40,12 +39,11 @@ class PredictionVerifier:
             data = response.json()
             # print("Google data", data)
             print("Capturing the data", data.get("data", []))
-            logging.info(f"Google API response: {data}")
             return data.get("items", [])[:2]
         
         return []
 
-    def generate_search_query(self, prediction_query: str) -> str:
+    def generate_search_query2(self, prediction_query: str) -> str:
         """Generate a concise question-style search query from a multi-paragraph prediction tweet."""
         context = """
         You are an expert at analyzing long prediction tweets (2-3 paragraphs) and extracting the core prediction to create concise, question-style search queries for Perplexica.
@@ -86,6 +84,190 @@ class PredictionVerifier:
         
         return completion.choices[0].message.content.strip()
 
+    def generate_polymarket_topic(self, prediction_query: str) -> str:
+        """Generate a Polymarket topic from the predictions."""
+        context = """You are an expert in identifying Polymarket topics from tweets containing predictions.
+        Your task is to extract the Polymarket topic from the prediction.
+        Here are some examples of Polymarket topics:
+        1. "Hamas will be defeated by end of 2025, Judea and Samaria annexed by end of 2026, minister says"
+            Topic: Israel-Hamas conflict
+        2. "I predict that the US will not default on its debt in 2024."
+            Topic: US debt default
+        3. "I believe that the 2024 US Presidential Election will be a  landslide victory for the Democrats."
+            Topic: 2024 US Presidential Election
+        4. "I predict that the price of Bitcoin will reach $100,000 by the end of 2025."
+            Topic: Bitcoin price
+        5. "I believe that the 2024 Summer Olympics will be held in Paris."
+            Topic: 2024 Summer Olympics
+        6. "I predict that US will leave NATO by 2025."
+            Topic: US leaving NATO
+
+        Now, given the following user prediction, generate a Polymarket topic. (Just the topic, no additional text or explanation.)"""
+
+        completion = self.groq_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user", "content": prediction_query}
+            ]
+        )
+        return completion.choices[0].message.content.strip()
+
+    def generate_polymarket_topic2(self, prediction_query: str) -> str:
+        """Generate a Polymarket topic from the predictions."""
+
+        context = """You are an expert in identifying Polymarket topics from tweets containing predictions.
+Your task is to extract the Polymarket topic from the prediction. Try to suggest 3 different formulations of the same topic. Each formulation should have a different granularity level of the topic. 
+
+Format your response as a JSON object with each topic formulation as a key-value pair, where the key is an integer starting from 1 and the value is the topic formulation.
+
+Here are some examples:
+1.
+    Input: 
+    "Hamas will be defeated by end of 2025, Judea and Samaria annexed by end of 2026, minister says"
+    
+    Expected output: 
+{
+    "1": "Israel-Hamas conflict"
+    "2": "Hamas defeat by end of 2025"
+    "3": "Israel-Hamas ceasefire by end of 2025"
+}
+
+2.
+    Input: 
+    "I predict that the US will not default on its debt in 2024."
+
+    Expected output:
+{   
+    "1": "US debt default",
+    "2": "US debt ceiling crisis in 2024",
+    "3": "US government default risk in 2024"
+}
+3.  
+    Input:
+    "I believe that the 2024 US Presidential Election will be a landslide victory for the Democrats."
+
+    Expected output:
+{   
+    "1": "2024 US Presidential Election",
+    "2": "US Presidential Election 2024",
+    "3": "US elections 2024"
+}
+4.
+    Input:
+    "I predict that the price of Bitcoin will reach $100,000 by the end of 2025."
+
+    Expected output:
+{   
+    1: "Bitcoin price",
+    2: "Bitcoin price prediction",
+    3: "Bitcoin price forecast"
+}
+
+5. 
+    Input:
+    "I believe that the 2024 Summer Olympics will be held in Paris."
+
+    Expected output:
+{   
+    "1": "2024 Summer Olympics",
+    "2": "Summer Olympics 2024",
+    "3": "Paris Summer Olympics"
+}
+6. 
+    Input:
+    "I predict that US will leave NATO by 2025."
+
+    Expected output:
+{       
+    "1": "US leaving NATO",
+    "2": "US NATO membership",
+    "3": "US NATO withdrawal"
+}
+        
+Now, analyze following prediction. 
+Ensure the response is **valid JSON** with no additional text."""
+
+        completion = self.groq_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user", "content": prediction_query}
+            ]
+        )
+
+        # print("Completion generate polymarket topic", completion.choices[0].message.content)
+
+        return completion.choices[0].message.content.strip()
+
+    def fetch_multiple_news_articles(self, search_queries) -> List[Dict]:
+        """Fetch news articles related to the prediction."""
+        print("Fetching news articles...")
+        raw_output = search_queries
+        raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+        # Extract JSON from response
+        match = re.search(r"\{(.*)\}", raw_output, re.DOTALL)
+        if match:
+            raw_output = match.group(0)  # Extract only the JSON content
+        # json_content = "{" + match.group(1) + "}"
+        
+        try:
+            analysis = json.loads(raw_output)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
+        
+        # search_queries_dict = json.loads(search_queries) 
+        search_queries_dict = analysis
+        articles = []  # Initialize an empty list to store articles
+        for query in search_queries_dict.values():
+            print(f"Fetching news articles for query: {query}")
+            articles = self.fetch_news_articles(query)
+            if len(articles) > 0:
+                return articles
+        # If no articles found, return an empty list
+        if len(articles) == 0:
+            print("No articles found for any of the search queries in news articles.")
+            return []
+    
+    def fetch_multiple_google_results(self, search_queries) -> List[Dict]:
+        """Fetch google results related to the prediction."""
+        print("Fetching google results...")
+
+        # try:
+        #     search_queries_dict = json.loads(search_queries)
+        # except json.JSONDecodeError as e:
+        #     raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
+        raw_output = search_queries
+        raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+        # Extract JSON from response
+        match = re.search(r"\{(.*)\}", raw_output, re.DOTALL)
+        if match:
+            raw_output = match.group(0)  # Extract only the JSON content
+        # json_content = "{" + match.group(1) + "}"
+        else:
+            print("No match found in fetch_multiple_google_results")
+            print("raw_output fetch_multiple_google_results::", raw_output)
+            return []
+        
+        try:                
+            analysis = json.loads(raw_output)
+        except json.JSONDecodeError as e:
+            print("raw_output fetch_multiple_google_results Error", raw_output)
+            raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
+        
+        # search_queries_dict = json.loads(search_queries) 
+        search_queries_dict = analysis
+        articles = []  # Initialize an empty list to store articles
+        for query in search_queries_dict.values():
+            print("Fetching google results for query:", query)
+            articles = self.fetch_google_results(query)
+            if len(articles) > 0:
+                return articles
+        # If no articles found, return an empty list
+        if len(articles) == 0:
+            print("No articles found for any of the search queries in google results.")
+            return []
+
     def fetch_news_articles(self, search_query: str) -> List[Dict]:
         """Fetch news articles related to the prediction, with up to 5 retries."""
 
@@ -103,13 +285,13 @@ class PredictionVerifier:
                 data = result.get("data", [])
 
                 print(f"Attempt {attempt}: Captured data ->", data)
-                logging.info(f"Attempt {attempt}: Datura API response: {data}")
+
                 if data:  # If we got results, return them
                     return data
 
             except Exception as e:
                 print(f"Attempt {attempt} failed with error: {e}")
-                logging.error(f"Attempt {attempt} failed with error: {e}")
+
             # If we're not on the last attempt, wait and retry
             if attempt < max_retries:
                 time.sleep(delay)
@@ -117,7 +299,6 @@ class PredictionVerifier:
 
         # After all retries fail
         print("All attempts failed. Returning empty list.")
-        logging.info("All attempts failed. Returning empty list.")
         return []
 
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
@@ -127,7 +308,6 @@ class PredictionVerifier:
         )
 
         print("Okay analyze_verification")
-        logging.info("Analyzing verification for prediction:")
         system_prompt = """
         You are an AI analyst verifying predictions for Polymarket, a prediction market where users bet on real-world outcomes. Your task is to classify claims as TRUE, FALSE, or UNCERTAIN *only when evidence is insufficient*.
 
@@ -193,16 +373,20 @@ class PredictionVerifier:
     def verify_prediction(self, prediction_query: str) -> Dict:
         """Main method to verify a prediction."""
         # Generate search query
-        search_query = self.generate_search_query(prediction_query)
-        # search_query = prediction_query
-        print(f"Generated Search Query: {search_query}")
-        logging.info(f"Generated Search Query: {search_query}")
-        # Fetch news articles
-        articles = self.fetch_news_articles(search_query)
-        # print("articles", articles)
-        # Fetch Google search results
-        google_results = self.fetch_google_results(search_query)
+        # search_query = self.generate_search_query(prediction_query)
+        # search_query = self.generate_polymarket_topic(prediction_query)
+        search_queries = self.generate_polymarket_topic2(prediction_query)
+
+        print(f"search_queries", search_queries)
+        # print(f"Generated Search Query: {search_query}")
         
+        # Fetch news articles
+        # articles = self.fetch_news_articles(search_query)
+        articles = self.fetch_multiple_news_articles(search_queries)
+        # Fetch Google search results
+        # google_results = self.fetch_google_results(search_query)
+        google_results = self.fetch_multiple_google_results(search_queries)
+
         # Prepare sources from both APIs
         all_sources = [
             {"title": a['title'], "source": a['link'], "description": a['snippet']} for a in articles
@@ -222,11 +406,9 @@ class PredictionVerifier:
             }
         # print("articles", articles)
         print("all_sources", len(all_sources))
-        logging.info(f"Total sources found: {len(all_sources)}")
         # Analyze verification
         verification_data = self.analyze_verification(prediction_query, all_sources)
         print("Final result")
-        logging.info("Final result")
         # Final result
         final_result = {
             "result": verification_data["result"],
