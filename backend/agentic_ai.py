@@ -575,11 +575,14 @@ Ensure the response is **valid JSON** with no additional text."""
         if match:
             raw_output = match.group(0)  # Extract only the JSON content
         # json_content = "{" + match.group(1) + "}"
-        
+        else:
+            print("No match found in fetch_multiple_news_articles")
+            print("raw_output fetch_multiple_news_articles::", raw_output)
+            return []        
         try:
             analysis = json.loads(raw_output)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
+            raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_news_articles: {e}")
         
         # search_queries_dict = json.loads(search_queries) 
         search_queries_dict = analysis
