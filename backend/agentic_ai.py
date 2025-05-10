@@ -17,6 +17,8 @@ from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
 import os
+from datura_py import Datura
+import time
 
 load_dotenv()
 # Add this near the top of your script
@@ -35,8 +37,9 @@ GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
 
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-2024-08-06")
-DATURA_API_URL = "https://apis.datura.ai/desearch/ai/search/links/twitter"
-
+MODEL_NAME1 = os.getenv("MODEL_NAME", "gpt-4o-mini-2024-07-18")
+DATURA_API_URL2 = "https://apis.datura.ai/desearch/ai/search/links/twitter"
+DATURA_API_URL1 = "https://apis.datura.ai/twitter/post/user"
 client = OpenAI(
     base_url="https://api.openai.com/v1",
     api_key=OPEN_AI_KEY,
@@ -46,7 +49,6 @@ client1  = OpenAIChatCompletionClient(
     # base_url="https://api.openai.com/v1",
     api_key=OPEN_AI_KEY,
 )
-
 
 # ============ COMPONENT 1: PREDICTION FINDER ============
 
@@ -61,29 +63,29 @@ class PredictionFinder:
     def generate_search_query(self, user_prompt: str) -> str:
         """Generate a properly formatted search query from user prompt."""
         context = """You are an expert in constructing search queries for the Datura API to find relevant tweets related to Polymarket predictions.
-Your task is to generate properly formatted queries based on user prompts.
+        Your task is to generate properly formatted queries based on user prompts.
 
-Here are some examples of well-structured Datura API queries:
+        Here are some examples of well-structured Datura API queries:
 
-1. I want mentions of predictions about the 2024 US Presidential Election, excluding Retweets, with at least 20 likes.  
-   Query: (President) (elections) (USA) min_faves:20  
+        1. I want mentions of predictions about the 2024 US Presidential Election, excluding Retweets, with at least 20 likes.  
+        Query: (President) (elections) (USA) min_faves:20  
 
-2. I want tweets from @Polymarket users discussing cryptocurrency price predictions, excluding tweets without links.  
-   Query: (Bitcoin) (Ethereum) (crypto) 
+        2. I want tweets from @Polymarket users discussing cryptocurrency price predictions, excluding tweets without links.  
+        Query: (Bitcoin) (Ethereum) (crypto) 
 
-3. I want tweets predicting the outcome of the Wisconsin Supreme Court election between Susan Crawford and Brad Schimel.  
-   Query: (Wisconsin) (SupremeCourt) (Crawford) (Schimel) (election)
+        3. I want tweets predicting the outcome of the Wisconsin Supreme Court election between Susan Crawford and Brad Schimel.  
+        Query: (Wisconsin) (SupremeCourt) (Crawford) (Schimel) (election)
 
-4. I want tweets discussing AI stock price predictions in 2025  
-   Query: (AI) (tech) (stock)
+        4. I want tweets discussing AI stock price predictions in 2025  
+        Query: (AI) (tech) (stock)
 
-5. I want mentions of predictions about the winner of the 2025 NCAA Tournament.  
-   Query: (NCAA) (MarchMadness) (2025) (winner) 
+        5. I want mentions of predictions about the winner of the 2025 NCAA Tournament.  
+        Query: (NCAA) (MarchMadness) (2025) (winner) 
 
-6. I want tweets discussing whether Yoon will be out as president of South Korea before May.  
-   Query: (Yoon) (SouthKorea) (president) (resign) (before May) 
+        6. I want tweets discussing whether Yoon will be out as president of South Korea before May.  
+        Query: (Yoon) (SouthKorea) (president) (resign) (before May) 
 
-Now, given the following user prompt, generate a properly formatted Datura API query. (Just the query, no additional text or explanation.)"""
+        Now, given the following user prompt, generate a properly formatted Datura API query. (Just the query, no additional text or explanation.)"""
 
         completion = self.groq_client.chat.completions.create(
             model=MODEL_NAME,
@@ -92,9 +94,37 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 {"role": "user", "content": user_prompt}
             ]
         )
-        
         return completion.choices[0].message.content.strip()
 
+    def generate_polymarket_topic(self, user_prompt: str) -> str:
+        """Generate a Polymarket topic from the user prompt."""
+        context = """You are an expert in identifying Polymarket topics from user prompts.
+        Your task is to extract the Polymarket topic from the user prompt.
+        Here are some examples of Polymarket topics:
+        1. I want mentions of predictions about the 2024 US Presidential Election, excluding Retweets, with at least 20 likes.
+            Topic: 2024 US Presidential Election
+        2. I want tweets from @Polymarket users discussing cryptocurrency price predictions, excluding tweets without links.
+            Topic: cryptocurrency price predictions
+        3. I want tweets predicting the outcome of the Wisconsin Supreme Court election between Susan Crawford and Brad Schimel.
+            Topic: Wisconsin Supreme Court election
+        4. I want tweets discussing AI stock price predictions in 2025
+            Topic: AI stock price predictions
+        5. I want mentions of predictions about the winner of the 2025 NCAA Tournament.
+            Topic: 2025 NCAA Tournament
+        6. I want tweets discussing whether Yoon will be out as president of South Korea before May.
+            Topic: Yoon out as president of South Korea before May
+
+        Now, given the following user prompt, generate a Polymarket topic. (Just the topic, no additional text or explanation.)"""
+
+        completion = self.groq_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user", "content": user_prompt}
+            ]
+        )
+        return completion.choices[0].message.content.strip()
+    
     async def get_tweets(self, user_prompt: str, min_likes: int = 0, count: int = 100, max_retries = 5) -> List[Dict]:
         #Fetch tweets from Datura API based on the generated query.
 
@@ -158,13 +188,14 @@ Now, given the following user prompt, generate a properly formatted Datura API q
                 "tweet_text": tweet["text"],
                 "like_count": tweet["like_count"],
                 "created_at": tweet["created_at"],
+                "tweet url": tweet["url"],
             }
             
             username_to_tweet[tweet["user"]["username"]] = tweet["text"]
         
         return hash_dict, username_to_tweet
     
-    def analyze_predictions(self, username_to_tweet: Dict) -> str:
+    def analyze_predictionsold(self, username_to_tweet: Dict) -> str:
         """Analyze tweets to identify predictions."""
         json_string = json.dumps(username_to_tweet, indent=4)
         
@@ -198,6 +229,66 @@ Expected Output:
 Now, analyze the following tweets and generate the output: 
 Ensure the response is **valid JSON** with no additional text.
 """
+
+        completion = self.groq_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user", "content": json_string}
+            ]
+        )
+        
+        return completion.choices[0].message.content
+
+    def analyze_predictions(self, username_to_tweet: Dict, poly_topic: str) -> str:
+        """Analyze tweets to identify predictions."""
+
+        input_dict = {"Polymarket Topic": poly_topic, "tweets": username_to_tweet}
+
+        print("input_dict", input_dict)
+
+        json_string = json.dumps(input_dict, indent=4)
+        
+        context = """You are an expert in identifying explicit and implicit predictions in tweets related to a Polymarket topic.
+
+Here is a JSON object containing a polymarket topic and tweets that should be related to it, where the first key is the string "Polymarket Topic" and the value is the Polymarket topic description, subsequently each key represents a unique tweet ID and the value is the tweet text.
+
+Your task:  
+For each tweet, determine if it contains an **explicit or implicit prediction** about a future event **related to the specified Polymarket topic**.  
+- If it **does**, return "Yes".  
+- If it **does not**, return "No".  
+
+Consider:
+- that the tweet may be related to the Polymarket topic but not contain a prediction, in which case you should return "No"
+- that the tweet may contain a prediction but not be related to the Polymarket topic, in which case you should also return "No"
+- that the tweet may contain a prediction and be related to the Polymarket topic, in which case you should return "Yes"
+- that the tweet may not be related to the Polymarket topic and not contain a prediction, in which case you should also return "No"
+
+Format your response as a JSON object with each tweet ID mapped to "Yes" or "No".
+
+Example:
+
+Input JSON:
+{"Polymarket Topic": "2026 CONCACAF World Cup Qualifiers", tweets:
+
+{
+"username1": "Miami FC trio Gerald Diaz, Nico Cardona, and Ricardo Rivera have been called up to the Puerto Rico national team for the 2026 CONCACAF World Cup Qualifiers.",
+"username2": "Another @FPFPuertoRico ☎️🆙 for Gerald Diaz, Nico Cardona, and Ricardo Rivera as Puerto Rico competes in the CONCACAF Qualifiers for 2026 🇵🇷 🙌 #vamosmiami",
+"username3": "I bet Canada will be the group winner in the CONCACAF Championship"
+}
+
+}
+
+Expected Output:
+{
+"username1": "No",
+"username2": "No",
+"username3": "Yes"
+}
+
+Now, analyze the following tweets.
+Ensure the response is **valid JSON** with no additional text.
+""" 
         
         completion = self.groq_client.chat.completions.create(
             model=MODEL_NAME,
@@ -208,7 +299,7 @@ Ensure the response is **valid JSON** with no additional text.
         )
         
         return completion.choices[0].message.content
-    
+
     def filter_tweets_by_prediction(self, yes_no: str, hash_dict: Dict) -> str:
         """Filter tweets to only include those with predictions."""
         match_yes_no = re.search(r"\{(.*)\}", yes_no, re.DOTALL)
@@ -224,7 +315,7 @@ Ensure the response is **valid JSON** with no additional text.
         
         return json.dumps(filtered_tweets, indent=4)
     
-    async def find_predictions(self, user_prompt: str) -> Dict:
+    async def find_predictionsold(self, user_prompt: str) -> Dict:
         """Main method to find predictions based on user prompt."""
 
         print(f"Generated Search Query: {user_prompt}")
@@ -237,12 +328,48 @@ Ensure the response is **valid JSON** with no additional text.
 
         # Process tweets
         hash_dict, username_to_tweet = self.process_tweets(tweets)
+        
+        print("DEBUGGING hash_dict")
+        print(f"Fetched {len(hash_dict)} tweets")
 
         # Analyze predictions
         prediction_analysis = self.analyze_predictions(username_to_tweet)
 
         # Filter tweets
         filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
+
+        # Return as dictionary
+        return json.loads(filtered_predictions)
+
+    async def find_predictions(self, user_prompt: str) -> Dict:
+        """Main method to find predictions based on user prompt."""
+
+        print(f"Generated Search Query: {user_prompt}")
+        
+        # Get Polymarket topic
+        poly_topic = self.generate_polymarket_topic(user_prompt)
+        print(f"Generated Polymarket Topic: {poly_topic}")
+        
+        # Get tweets
+        tweets = await self.get_tweets(user_prompt)
+        
+        if not tweets:
+            return {"error": "No tweets found matching the criteria"}
+        
+        # Process tweets
+        hash_dict, username_to_tweet = self.process_tweets(tweets)
+
+        print(f"Fetched {len(hash_dict)} tweets")
+
+        # Analyze predictions
+        prediction_analysis = self.analyze_predictions(username_to_tweet, poly_topic)
+
+        print("Prediction Analysis:", prediction_analysis)
+
+        # Filter tweets
+        filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
+        
+        print("Filtered Predictions:", filtered_predictions)
 
         # Return as dictionary
         return json.loads(filtered_predictions)
@@ -257,39 +384,51 @@ class PredictionVerifier:
         self.news_api_token = news_api_token
         self.google_api_key = google_api_key
         self.google_cse_id = google_cse_id
+        self.datura = Datura(api_key=DATURA_API_KEY)
     
     def fetch_google_results(self, query: str) -> List[Dict]:
         """Fetch search results from Google Custom Search API."""
         google_url = f"https://www.googleapis.com/customsearch/v1?q={query}&key={self.google_api_key}&cx={self.google_cse_id}&num=3"
         
         response = requests.get(google_url)
+        # print("Google URL", response)
         if response.status_code == 200:
             data = response.json()
-            return data.get("items", [])
+            # print("Google data", data)
+            print("Capturing the data", data.get("data", []))
+            return data.get("items", [])[:2]
+        
         return []
-    
-    def generate_search_query(self, prediction_query: str) -> str:
-        """Generate a search query for news APIs based on the prediction."""
+
+    def generate_search_query2(self, prediction_query: str) -> str:
+        """Generate a concise question-style search query from a multi-paragraph prediction tweet."""
         context = """
-        You are an expert in constructing search queries for news APIs to find relevant articles related to political predictions.
-        Your task is to generate a properly formatted query for searching news related to a given prediction.
+        You are an expert at analyzing long prediction tweets (2-3 paragraphs) and extracting the core prediction to create concise, question-style search queries for Perplexica.
+
+        Guidelines:
+        1. Read the entire tweet carefully, focusing on the main prediction
+        2. Identify the key subject, event, and timeframe
+        3. Ignore supporting arguments or explanations
+        4. Convert the core prediction into a natural-sounding question
+        5. Keep it under 15 words when possible
 
         Examples:
-        1. Prediction: 'Chances of UK leaving the European Union in 2016 was 52%'
-           Query: Brexit, UK, European Union, 2016
+        1. Prediction tweet: 'After analyzing market trends and political indicators, I believe there's a 52% chance that the UK will vote to leave the European Union in the 2016 referendum. This accounts for... [2 more paragraphs]'
+        Query: What were the chances of Brexit happening in 2016?
 
-        2. Prediction: 'Chances of Donald Trump winning the 2016 US Presidential Election was 30%'
-           Query: Donald Trump, elections, 2024
+        2. Prediction tweet: 'Considering current polling data and historical trends, my model shows a 30% probability that Donald Trump could win the 2016 US Presidential Election. Factors include... [3 paragraphs]'
+        Query: Was Trump likely to win the 2016 election?
 
-        3. Prediction: 'Chances of Apple's iPhone revolutionizing the smartphone industry in 2007 was 80%'
-           Query: Apple, iPhone, smartphone, 2007
+        3. Prediction tweet: 'Based on early adoption rates and technology reviews, there's an 80% probability that Apple's iPhone will revolutionize the smartphone industry when it launches in 2007. [2 more paragraphs explaining]'
+        Query: Did experts predict iPhone's success in 2007?
 
-        4. Prediction: 'Chances of India winning T20 Cricket WorldCup Final in 2024 was 52%'
-           Query: India, T20, Cricket World Cup, Winner, 2024
+        4. Prediction tweet: 'After evaluating team performance and tournament statistics, I estimate India has a 52% chance of winning the T20 Cricket World Cup Final in 2024. The analysis shows... [3 paragraphs]'
+        Query: Were India favorites for the 2024 T20 World Cup?
 
-        5. Prediction: 'Chances of Bitcoin reaching $100,000 in 2021 was 40%'
-           Query: Bitcoin, price, cryptocurrency, $100,000, 2021
-        Now, generate a query for the following prediction: (Only generate query and no additional text or explanation.)
+        5. Prediction tweet: 'Cryptocurrency volatility patterns suggest a 40% probability Bitcoin could reach $100,000 by December 2021. My model accounts for... [2 paragraphs of technical analysis]'
+        Query: Could Bitcoin hit $100k in 2021?
+
+        Now generate a concise question query (only the question, no extra text) for this prediction tweet:
         """
         
         completion = self.groq_client.chat.completions.create(
@@ -301,50 +440,211 @@ class PredictionVerifier:
         )
         
         return completion.choices[0].message.content.strip()
-    
-    def fetch_news_articles(self, search_query: str) -> List[Dict]:
-        """Fetch news articles related to the prediction."""
-        encoded_keywords = re.sub(r'[^\w\s]', '', search_query).replace(' ', '+')
-        
-        news_url = (
-            f"https://api.thenewsapi.com/v1/news/all?"
-            f"api_token={self.news_api_token}"
-            f"&search={encoded_keywords}"
-            f"&search_fields=title,main_text,description,keywords"
-            f"&language=en"
-            f"&published_after=2024-01-01"
-            f"&sort=relevance_score"
+
+    def generate_polymarket_topic(self, prediction_query: str) -> str:
+        """Generate a Polymarket topic from the predictions."""
+        context = """You are an expert in identifying Polymarket topics from tweets containing predictions.
+        Your task is to extract the Polymarket topic from the prediction.
+        Here are some examples of Polymarket topics:
+        1. "Hamas will be defeated by end of 2025, Judea and Samaria annexed by end of 2026, minister says"
+            Topic: Israel-Hamas conflict
+        2. "I predict that the US will not default on its debt in 2024."
+            Topic: US debt default
+        3. "I believe that the 2024 US Presidential Election will be a  landslide victory for the Democrats."
+            Topic: 2024 US Presidential Election
+        4. "I predict that the price of Bitcoin will reach $100,000 by the end of 2025."
+            Topic: Bitcoin price
+        5. "I believe that the 2024 Summer Olympics will be held in Paris."
+            Topic: 2024 Summer Olympics
+        6. "I predict that US will leave NATO by 2025."
+            Topic: US leaving NATO
+
+        Now, given the following user prediction, generate a Polymarket topic. (Just the topic, no additional text or explanation.)"""
+
+        completion = self.groq_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user", "content": prediction_query}
+            ]
         )
-        
-        news_response = requests.get(news_url)
-        if news_response.status_code == 200:
-            news_data = news_response.json()
-            return news_data.get("data", [])
-        return []
+        return completion.choices[0].message.content.strip()
+
+    def generate_polymarket_topic2(self, prediction_query: str) -> str:
+        """Generate a Polymarket topic from the predictions."""
+
+        context = """You are an expert in identifying Polymarket topics from tweets containing predictions.
+Your task is to extract the Polymarket topic from the prediction. Try to suggest 3 different formulations of the same topic. Each formulation should have a different granularity level of the topic. 
+
+Format your response as a JSON object with each topic formulation as a key-value pair, where the key is an integer starting from 1 and the value is the topic formulation.
+
+Here are some examples:
+1.
+    Input: 
+    "Hamas will be defeated by end of 2025, Judea and Samaria annexed by end of 2026, minister says"
     
+    Expected output: 
+{
+    "1": "Israel-Hamas conflict"
+    "2": "Hamas defeat by end of 2025"
+    "3": "Israel-Hamas ceasefire by end of 2025"
+}
+
+2.
+    Input: 
+    "I predict that the US will not default on its debt in 2024."
+
+    Expected output:
+{   
+    "1": "US debt default",
+    "2": "US debt ceiling crisis in 2024",
+    "3": "US government default risk in 2024"
+}
+3.  
+    Input:
+    "I believe that the 2024 US Presidential Election will be a landslide victory for the Democrats."
+
+    Expected output:
+{   
+    "1": "2024 US Presidential Election",
+    "2": "US Presidential Election 2024",
+    "3": "US elections 2024"
+}
+4.
+    Input:
+    "I predict that the price of Bitcoin will reach $100,000 by the end of 2025."
+
+    Expected output:
+{   
+    1: "Bitcoin price",
+    2: "Bitcoin price prediction",
+    3: "Bitcoin price forecast"
+}
+
+5. 
+    Input:
+    "I believe that the 2024 Summer Olympics will be held in Paris."
+
+    Expected output:
+{   
+    "1": "2024 Summer Olympics",
+    "2": "Summer Olympics 2024",
+    "3": "Paris Summer Olympics"
+}
+6. 
+    Input:
+    "I predict that US will leave NATO by 2025."
+
+    Expected output:
+{       
+    "1": "US leaving NATO",
+    "2": "US NATO membership",
+    "3": "US NATO withdrawal"
+}
+        
+Now, analyze following prediction. 
+Ensure the response is **valid JSON** with no additional text."""
+
+        completion = self.groq_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user", "content": prediction_query}
+            ]
+        )
+
+        
+        return completion.choices[0].message.content
+
+    def fetch_multiple_news_articles(self, search_queries) -> List[Dict]:
+        """Fetch news articles related to the prediction."""
+        print("Fetching news articles...")
+        
+        search_queries_dict = json.loads(search_queries) 
+
+        for query in search_queries_dict.values():
+            print(f"Fetching news articles for query: {query}")
+            articles = self.fetch_news_articles(query)
+            if len(articles) > 0:
+                return articles
+        # If no articles found, return an empty list
+        if len(articles) == 0:
+            print("No articles found for any of the search queries in news articles.")
+            return []
+    
+    def fetch_multiple_google_results(self, search_queries) -> List[Dict]:
+        """Fetch google results related to the prediction."""
+        print("Fetching google results...")
+
+        search_queries_dict = json.loads(search_queries) 
+
+        for query in search_queries_dict.values():
+            print("Fetching google results for query:", query)
+            articles = self.fetch_google_results(query)
+            if len(articles) > 0:
+                return articles
+        # If no articles found, return an empty list
+        if len(articles) == 0:
+            print("No articles found for any of the search queries in google results.")
+            return []
+
+    def fetch_news_articles(self, search_query: str) -> List[Dict]:
+        """Fetch news articles related to the prediction, with up to 5 retries."""
+
+        max_retries = 5
+        delay = 1  # Start with 1 second delay
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                result = self.datura.basic_web_search(
+                    query=search_query,
+                    num=5,
+                    start=1
+                )
+
+                data = result.get("data", [])
+
+                print(f"Attempt {attempt}: Captured data ->", data)
+
+                if data:  # If we got results, return them
+                    return data
+
+            except Exception as e:
+                print(f"Attempt {attempt} failed with error: {e}")
+
+            # If we're not on the last attempt, wait and retry
+            if attempt < max_retries:
+                time.sleep(delay)
+                delay *= 2  # Optional: exponential backoff
+
+        # After all retries fail
+        print("All attempts failed. Returning empty list.")
+        return []
+
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
         """Analyze the sources to determine if the prediction was accurate."""
         article_summaries = "\n".join(
-            [f"Title: {src['title']}, Source: {src['source']}, Description: {src['description']}, Snippet: {src['snippet']}" for src in all_sources]
+            [f"Title: {src['title']}, Source: {src['source']}, Description: {src['description']}" for src in all_sources]
         )
 
+        print("Okay analyze_verification")
         system_prompt = """
-        You are an AI analyst verifying predictions for Polymarket, a prediction market where users bet on real-world outcomes. Your task is to classify claims as TRUE, FALSE, or UNCERTAIN **only when evidence is insufficient**.
+        You are an AI analyst verifying predictions for Polymarket, a prediction market where users bet on real-world outcomes. Your task is to classify claims as TRUE, FALSE, or UNCERTAIN *only when evidence is insufficient*.
 
         ### Rules:
-        1. **Classification Criteria**:
-        - `TRUE`: The news articles **conclusively confirm** the prediction happened (e.g., "Bill passed" → voting records show it passed).
-        - `FALSE`: The news articles **conclusively disprove** the prediction (e.g., "Company will move HQ" → CEO denies it).
-        - `UNCERTAIN`: **Only if** evidence is missing, conflicting, or outdated (e.g., no articles after the predicted event date).
+        1. *Classification Criteria*:
+        - ⁠ TRUE ⁠: The news articles *conclusively confirm* the prediction happened (e.g., "Bill passed" → voting records show it passed).
+        - ⁠ FALSE ⁠: The news articles *conclusively disprove* the prediction (e.g., "Company will move HQ" → CEO denies it).
+        - ⁠ UNCERTAIN ⁠: *Only if* evidence is missing, conflicting, or outdated (e.g., no articles after the predicted event date).
 
-        2. **Evidence Standards**:
-        - Prioritize **recent articles** (within 7 days of prediction date).
-        - Trust **primary sources** (government releases, official statements) over opinion pieces.
+        2. *Evidence Standards*:
+        - Prioritize *recent articles* (within 7 days of prediction date).
+        - Trust *primary sources* (government releases, official statements) over opinion pieces.
         - Ignore irrelevant or off-topic articles.
 
-        3. **Conflict Handling**:
+        3. *Conflict Handling*:
         - If sources conflict, weigh authoritative sources (e.g., Reuters) higher than fringe outlets.
-        - If timing is unclear (e.g., "will happen next week" but no update), default to `UNCERTAIN`.
+        - If timing is unclear (e.g., "will happen next week" but no update), default to ⁠ UNCERTAIN ⁠.
         
         """       
 
@@ -355,14 +655,14 @@ class PredictionVerifier:
         {article_summaries}
 
         Based on this data, determine if the prediction was accurate. 
-        Summarize the key evidence and provide the output in **JSON format** with the following structure:
+        Summarize the key evidence and provide the output in *JSON format* with the following structure:
 
         {{
           "result": "TRUE/FALSE/UNCERTAIN",
           "summary": "Brief explanation of why the claim is classified as TRUE, FALSE, or UNCERTAIN based on the news articles."
         }}
 
-        Ensure the response is **valid JSON** with no additional text.
+        Ensure the response is *valid JSON* with no additional text.
         """
         
         ai_verification = self.groq_client.chat.completions.create(
@@ -375,6 +675,7 @@ class PredictionVerifier:
         
         match = re.search(r"\{(.*)\}", ai_verification.choices[0].message.content, re.DOTALL)
         if match:
+            print("Match found")
             ai_verification_result = "{" + match.group(1) + "}"
             try:
                 return json.loads(ai_verification_result)
@@ -392,32 +693,42 @@ class PredictionVerifier:
     def verify_prediction(self, prediction_query: str) -> Dict:
         """Main method to verify a prediction."""
         # Generate search query
-        search_query = self.generate_search_query(prediction_query)
-        print(f"Generated Search Query: {search_query}")
+        # search_query = self.generate_search_query(prediction_query)
+        # search_query = self.generate_polymarket_topic(prediction_query)
+        search_queries = self.generate_polymarket_topic2(prediction_query)
+
+        print(f"search_queries", search_queries)
+        # print(f"Generated Search Query: {search_query}")
         
         # Fetch news articles
-        articles = self.fetch_news_articles(search_query)
-        
+        # articles = self.fetch_news_articles(search_query)
+        articles = self.fetch_multiple_news_articles(search_queries)
         # Fetch Google search results
-        google_results = self.fetch_google_results(prediction_query)
-        
+        # google_results = self.fetch_google_results(search_query)
+        google_results = self.fetch_multiple_google_results(search_queries)
+
         # Prepare sources from both APIs
         all_sources = [
-            {"title": a['title'], "source": a['source'], "published": a['published_at'], "description": a['description'], "snippet": a['snippet']} for a in articles
+            {"title": a['title'], "source": a['link'], "description": a['snippet']} for a in articles
         ] + [
-            {"title": g['title'], "source": g['link'], "snippet": g['snippet'], "description": g.get('pagemap', {}).get('metatags', [{}])[0].get('og:description', '') if 'pagemap' in g else "", "published": "N/A"} for g in google_results
+            {"title": g['title'], "source": g['link'], "description": g['snippet']} for g in google_results
         ]
-        
+
+        # all_sources = [
+        #     {"title": g['title'], "source": g['link'], "snippet": g['snippet']} for g in google_results
+        # ]
+        # print("all_sources", all_sources)
         if not all_sources:
             return {
                 "result": "UNCERTAIN",
                 "summary": "No relevant information found to verify this prediction.",
                 "sources": []
             }
-        
+        # print("articles", articles)
+        print("all_sources", len(all_sources))
         # Analyze verification
         verification_data = self.analyze_verification(prediction_query, all_sources)
-        
+        print("Final result")
         # Final result
         final_result = {
             "result": verification_data["result"],
@@ -429,13 +740,18 @@ class PredictionVerifier:
     
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
 
-class PredictorProfiler:
+class PredictionProfiler:
     def __init__(self, groq_client, datura_api_key, datura_api_url):
         self.groq_client = groq_client
         self.datura_api_key = datura_api_key
         self.datura_api_url = datura_api_url
 
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
+        print(handle)
+
+        if handle.startswith("@"):
+            handle = handle[1:]
+
         """Fetch recent tweets from a specific user."""
         headers = {
             "Authorization": f"{self.datura_api_key}",
@@ -443,17 +759,8 @@ class PredictorProfiler:
         }
         
         params = {
-            "query": f"from:{handle}",
-            "sort": "Top",
-            "lang": "en",
-            "verified": True,
-            "blue_verified": True,
-            "is_quote": False,
-            "is_video": False,
-            "is_image": False,
-            "min_retweets": 0,
-            "min_replies": 0,
-            "min_likes": 0,
+            #"query": "until:2024-01-31",
+            "user": handle,
             "count": 30  #100
         }
         
@@ -465,73 +772,109 @@ class PredictorProfiler:
                 print(len(tweets_ls), "tweets found")
                 if tweets_ls:
                     tweets = [tweet.get("text", "") for tweet in tweets_ls]
-                    raw_tweets = tweets_ls
-                    return {"tweets": tweets, "raw_tweets": raw_tweets}
+                    return {"tweets": tweets}
                 
             except requests.exceptions.RequestException as e:
-                return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": [], "raw_tweets": []}
+                return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": []}
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
             await asyncio.sleep(2)
         
-        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": [], "raw_tweets": []}
+        return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
 
     async def filter_predictions(self, tweets: List[str]) -> Dict:
-        """Filter tweets to only include predictions."""
-        # tweets = tweets[:30]  # Limit to 30 tweets for analysis
-
-        tweet_list = "\n".join([f"{i+1}. {t}" for i, t in enumerate(tweets)])
+        """Filter tweets to only include predictions, processing in batches of 25."""
+        # Initialize an empty list to store all prediction results
+        all_predictions = []
+        batch_size = 25
         
-        system_context = """You are an expert in identifying explicit and implicit predictions in tweets that could be relevant to Polymarket, a prediction market platform. Polymarket users bet on future events in politics, policy, business, law, and geopolitics.
+        # Process tweets in batches of 25
+        for i in range(0, len(tweets), batch_size):
+            batch_tweets = tweets[i:i+batch_size]
+            batch_tweet_list = "\n".join([f"{j+1}. {t}" for j, t in enumerate(batch_tweets)])
+            
+            system_context = """You are an expert in identifying **explicit and implicit predictions** in tweets that could be relevant to **Polymarket**, a prediction market platform. Polymarket users bet on **future events** in politics, policy, business, law, and geopolitics.
 
-        **Definitions:**
-        1. **Explicit Prediction**: A direct statement about a future outcome (e.g., 'X will happen,' 'Y is likely to pass').
-        2. **Implicit Prediction**: A statement implying a future outcome (e.g., 'Senator proposes bill,' 'Protests may lead to...').
+            **Definitions:**
+            1. **Explicit Prediction**: A direct statement about a future outcome (e.g., "X will happen," "Y is likely to pass").
+            2. **Implicit Prediction**: A statement implying a future outcome (e.g., "Senator proposes bill," "Protests may lead to...").
 
-        **Polymarket Topics Include:**
-        - Elections, legislation, court rulings
-        - Policy changes (tariffs, regulations)
-        - Business decisions (company moves, market impacts)
-        - Geopolitical events (wars, treaties, sanctions)
-        - Legal/Investigative outcomes (prosecutions, declassifications)
+            **Polymarket Topics Include:**
+            - Elections, legislation, court rulings
+            - Policy changes (tariffs, regulations)
+            - Business decisions (company moves, market impacts)
+            - Geopolitical events (wars, treaties, sanctions)
+            - Legal/Investigative outcomes (prosecutions, declassifications)
 
-        **Exclude:**
-        - Past events (unless they imply future consequences)
-        - Pure opinions without forecastable outcomes
-        - Non-actionable statements (e.g., 'People are struggling')
+            **Important Instruction:** Be *generous* in your classification. If a tweet suggests even a plausible implication of a future event **relevant to Polymarket topics**, classify it as **"Yes"**. It is better to include weak signals than to exclude potentially relevant ones. When in doubt, lean toward **"Yes"**.
 
-        **Examples:**
-        - 'Trump will win in 2024' → **Yes (Explicit)**
-        - 'Senator proposes bill to ban TikTok' → **Yes (Implicit)**
-        - 'The economy is collapsing' → **No (No actionable prediction)**
+            **Exclude:**
+            - Past events (unless they imply future consequences)
+            - Pure opinions without any forecastable outcome
+            - Non-actionable statements (e.g., "People are struggling")
 
-        **Task:** For each tweet, return **'Yes'** if it contains an explicit/implicit prediction relevant to Polymarket, else **'No'**. Respond *only* with a JSON object like:
-        {
-        "predictions": ["Yes", "No", ...]
-        }
-        """
-        
-        response = await asyncio.to_thread(self.groq_client.chat.completions.create,
-            model=MODEL_NAME,
-            messages=[{"role": "system", "content": system_context},
-                      {"role": "user", "content": tweet_list}]
-        )
-        
-        raw_output = response.choices[0].message.content
-        
-        # Remove markdown wrapping if present
-        if raw_output.startswith("\njson"):
-            raw_output = re.sub(r"\njson|\n", "", raw_output).strip()
-        
-        try:
-            parsed = json.loads(raw_output)
-            return {
-                "predictions": parsed.get("predictions", []),
+            **Examples:**
+            - "Trump will win in 2024" → **Yes (Explicit)**
+            - "Senator proposes bill to ban TikTok" → **Yes (Implicit)**
+            - "Nikki Haley is gaining ground in Iowa polls." → **Yes (Implicit)** (implies prediction market relevance)
+            - "Senate to vote on crypto regulation bill next week." → **Yes (Implicit)**
+            - "Will Russia use nuclear weapons in 2024?" → **Yes (Explicit)**
+            - "Israel expected to launch ground invasion of Gaza." → **Yes (Implicit)**
+            - "Elon Musk hints at stepping down as Twitter CEO." → **Yes (Implicit)**
+            - "The economy is collapsing" → **No** (No actionable prediction)
+            - "I miss when politicians actually cared about the people." → **No** (opinion, not predictive)
+            - "The economy crashed last year and it's all downhill from here." → **No** (past event, vague future implication)
+            - "Climate change is real." → **No** (statement, no actionable prediction)
+
+            **Task:** For each tweet, return **"Yes"** if it contains an explicit or implicit prediction relevant to Polymarket — even if it's subtle or implied. Respond *only* with a JSON object like:
+            {
+            "predictions": ["Yes", "No", ...]
             }
-        except Exception as e:
-            print("Failed to parse LLM response:")
-            print(raw_output)
-            raise e
+            """
+            
+            response = await asyncio.to_thread(self.groq_client.chat.completions.create,
+                model=MODEL_NAME1,
+                messages=[{"role": "system", "content": system_context},
+                        {"role": "user", "content": batch_tweet_list}]
+            )
+            
+            raw_output = response.choices[0].message.content
+            print("raw_output", raw_output)
+            raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+            # Step 2: Extract JSON Content (if extra text exists)
+            match = re.search(r"\{.*\}", raw_output, re.DOTALL)
+            if match:
+                raw_output = match.group(0)  # Extract only the JSON content
+            
+            try:
+                parsed = json.loads(raw_output.encode().decode('utf-8-sig'))  # Removes BOM if present
+                # Extend the all_predictions list with the batch results
+                all_predictions.extend(parsed.get("predictions", []))
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
+                print(raw_output)
+                # If parsing fails, add "No" for each tweet in the batch as a fallback
+                all_predictions.extend(["No"] * len(batch_tweets))
+        
+        # Return combined results in the expected format
+        return {
+            "predictions": all_predictions,
+        }
+        # raw_output = response.choices[0].message.content
+        
+        # # Remove markdown wrapping if present
+        # if raw_output.startswith("\njson"):
+        #     raw_output = re.sub(r"\njson|\n", "", raw_output).strip()
+        
+        # try:
+        #     parsed = json.loads(raw_output)
+        #     return {
+        #         "predictions": parsed.get("predictions", []),
+        #     }
+        # except Exception as e:
+        #     print("Failed to parse LLM response:")
+        #     print(raw_output)
+        #     raise e
 
     async def apply_filter(self, tweets: List[str], outcomes: Dict) -> List[str]:
         """Apply prediction filter to tweets."""
@@ -640,6 +983,8 @@ class PredictorProfiler:
         profile = await self.build_profile(handle)
 
         if "error" in profile:
+            print("This sucks")
+            print("Error in profile:", profile["error"])
             return {"error": profile["error"]}
 
         if not profile["prediction_tweets"]:
@@ -715,7 +1060,6 @@ class PredictorProfiler:
         """Calculate credibility scores for multiple users concurrently."""
         tasks = [self.calculate_credibility_score(handle, prediction_verifier) for handle in handles]
         return await asyncio.gather(*tasks)
-
 
 # ============ AUTOGEN INTEGRATION ============
 # Register the functions with the agents
@@ -818,8 +1162,8 @@ def create_prediction_agents():
     if persistent_assistant is not None:
         return persistent_assistant  # Reuse existing agent    
     # Initialize components
-    prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL)
-    predictor_profiler = PredictorProfiler(client, DATURA_API_KEY, DATURA_API_URL)
+    prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL2)
+    predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL1)
     prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
     
     # Create function map for the UserProxyAgent with the new function
@@ -881,25 +1225,28 @@ async def run_prediction_analysis(query: str = "Give me a summary of the predict
 
 if __name__ == "__main__":
     # Example 1: Find predictions on a topic
-    prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL)
+    prediction_finder = PredictionFinder(client, DATURA_API_KEY, DATURA_API_URL2)
     
     # Example 2: Build a predictor profile
-    predictor_profiler = PredictorProfiler(client, DATURA_API_KEY, DATURA_API_URL)
+    predictor_profiler = PredictionProfiler(client, DATURA_API_KEY, DATURA_API_URL1)
     
     # Example 3: Verify a prediction
     prediction_verifier = PredictionVerifier(client, NEWS_API_TOKEN, GOOGLE_API_KEY, GOOGLE_CSE_ID)
 
     print("User: Hello")
     print()
-    response = asyncio.run(run_prediction_analysis("Give me predictions on Will trump lower tariffs on china in april?"))
+    #task = "Give me predictions on Will trump lower tariffs on china in april?"
+    #task = "Give me predictions on Israel x Hamas ceasefire before June 2025?"
+    #task = "Find predictions on The North, Central American and Caribbean section of the 2026 FIFA World Cup qualification."
+    #task = "Find predictions on winners of 2026 FIFA World Cup qualification (AFC)"
+    #response = asyncio.run(run_prediction_analysis(task))
 
-    # print("Response from prediction analysis:")
-    # print(response)
+    response = asyncio.run(run_prediction_analysis("Give me credibility scores for @elonmusk"))
 
-    #print("User: You are looking awesome today")
-    #print()
-    #response = asyncio.run(run_prediction_analysis("Give me credibility scores for @elonmusk"))
+    #task = "Verify the prediction: The next pope will be from Africa."
+    #task = "Verify the prediction: Chile will qualify for the 2026 FIFA World Cup."
+    #response = asyncio.run(run_prediction_analysis(task))
 
     print("Response from prediction analysis:")
     print(response)
-    asyncio.run(run_prediction_analysis("Now give me credibility scores of the 1st 2 handles in a tabular format"))
+    #asyncio.run(run_prediction_analysis("Now give me credibility scores of the 1st 2 handles in a tabular format"))
