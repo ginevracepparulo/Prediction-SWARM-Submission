@@ -7,3 +7,4 @@ SwarmcentsApp.spec
 inno_script.iss
 setup
 utils
+backend/web_search.py

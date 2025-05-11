@@ -518,18 +518,7 @@ Here are some examples:
     "2": "US Presidential Election 2024",
     "3": "US elections 2024"
 }
-4.
-    Input:
-    "I predict that the price of Bitcoin will reach $100,000 by the end of 2025."
-
-    Expected output:
-{   
-    1: "Bitcoin price",
-    2: "Bitcoin price prediction",
-    3: "Bitcoin price forecast"
-}
-
-5. 
+4. 
     Input:
     "I believe that the 2024 Summer Olympics will be held in Paris."
 
@@ -539,7 +528,7 @@ Here are some examples:
     "2": "Summer Olympics 2024",
     "3": "Paris Summer Olympics"
 }
-6. 
+5. 
     Input:
     "I predict that US will leave NATO by 2025."
 
@@ -549,7 +538,26 @@ Here are some examples:
     "2": "US NATO membership",
     "3": "US NATO withdrawal"
 }
-        
+6. 
+    Input:
+    "Today Putin said, “We offer direct talks without conditions on Thursday in Istanbul,” while rejecting the proposed 30-day ceasefire."
+
+    Expected output:
+{
+    "1": "Russia-Ukraine peace negotiations",
+    "2": "Putin proposes unconditional talks in Istanbul amid ongoing war",
+    "3": "Russia-Ukraine ceasefire and peace talks developments"
+}
+7. 
+    Input:
+    "French media denies claims that President Macron was caught with cocaine during a train ride to Ukraine. The footage, which showed Macron and Merz with objects some online claimed resembled drug paraphernalia, sparked speculation. French outlet Libération says there is “no evidence” to support the rumors, clarifying that Macron was holding a handkerchief and Merz had a drink "
+
+    Expected output:
+{
+    "1": "Macron cocaine allegations",
+    "2": "Macron denies drug use during Ukraine train visit",
+    "3": "Macron and Merz drug rumor debunked by French media"
+}      
 Now, analyze following prediction. 
 Ensure the response is **valid JSON** with no additional text."""
 
@@ -586,56 +594,87 @@ Ensure the response is **valid JSON** with no additional text."""
         
         # search_queries_dict = json.loads(search_queries) 
         search_queries_dict = analysis
-        articles = []  # Initialize an empty list to store articles
+        urls = []  # Initialize an empty list to store articles
         for query in search_queries_dict.values():
             print(f"Fetching news articles for query: {query}")
-            articles = self.fetch_news_articles(query)
-            if len(articles) > 0:
-                return articles
+            summary, links = self.fetch_web_search_results(query)
+            if len(links) > 0:
+                for annotation in links:
+                    urls.append(annotation.url_citation.url)
+                print("This is the annotation list fetch_multiple_news_articles",[summary, urls])
+                return [summary, urls]
         # If no articles found, return an empty list
-        if len(articles) == 0:
+        if len(links) == 0:
             print("No articles found for any of the search queries in news articles.")
             return []
-    
-    def fetch_multiple_google_results(self, search_queries) -> List[Dict]:
-        """Fetch google results related to the prediction."""
-        print("Fetching google results...")
 
-        # try:
-        #     search_queries_dict = json.loads(search_queries)
-        # except json.JSONDecodeError as e:
-        #     raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
-        raw_output = search_queries
-        raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
-        # Extract JSON from response
-        match = re.search(r"\{(.*)\}", raw_output, re.DOTALL)
-        if match:
-            raw_output = match.group(0)  # Extract only the JSON content
-        # json_content = "{" + match.group(1) + "}"
-        else:
-            print("No match found in fetch_multiple_google_results")
-            print("raw_output fetch_multiple_google_results::", raw_output)
+    # def fetch_multiple_google_results(self, search_queries) -> List[Dict]:
+    #     """Fetch google results related to the prediction."""
+    #     print("Fetching google results...")
+
+    #     # try:
+    #     #     search_queries_dict = json.loads(search_queries)
+    #     # except json.JSONDecodeError as e:
+    #     #     raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
+    #     raw_output = search_queries
+    #     raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+    #     # Extract JSON from response
+    #     match = re.search(r"\{(.*)\}", raw_output, re.DOTALL)
+    #     if match:
+    #         raw_output = match.group(0)  # Extract only the JSON content
+    #     # json_content = "{" + match.group(1) + "}"
+    #     else:
+    #         print("No match found in fetch_multiple_google_results")
+    #         print("raw_output fetch_multiple_google_results::", raw_output)
+    #         return []
+        
+    #     try:                
+    #         analysis = json.loads(raw_output)
+    #     except json.JSONDecodeError as e:
+    #         print("raw_output fetch_multiple_google_results Error", raw_output)
+    #         raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
+        
+    #     # search_queries_dict = json.loads(search_queries) 
+    #     search_queries_dict = analysis
+    #     articles = []  # Initialize an empty list to store articles
+    #     for query in search_queries_dict.values():
+    #         print("Fetching google results for query:", query)
+    #         articles = self.fetch_google_results(query)
+    #         if len(articles) > 0:
+    #             return articles
+    #     # If no articles found, return an empty list
+    #     if len(articles) == 0:
+    #         print("No articles found for any of the search queries in google results.")
+    #         return []
+
+    def fetch_web_search_results(self, query: str) -> List[Dict]:
+        """Fetch search results using OpenAI's web search functionality."""
+        print(f"Searching web for: {query}")
+        try:
+            completion = self.groq_client.chat.completions.create(
+                model="gpt-4o-search-preview",
+                web_search_options={},
+                messages=[
+                {
+                    "role": "system",
+                    "content": "You are a concise Prediction verifier assistant. Always provide your response in a single paragraph with no bullet points or formatting."
+                },
+                    {
+                        "role": "user",
+                        "content": query,
+                    }
+                ],
+            )
+            
+            # Extract search results from the response
+            response = completion.choices[0].message.content
+            links = completion.choices[0].message.annotations            
+            return response, links
+                
+        except Exception as e:
+            print(f"Error in web search: {e}")
             return []
         
-        try:                
-            analysis = json.loads(raw_output)
-        except json.JSONDecodeError as e:
-            print("raw_output fetch_multiple_google_results Error", raw_output)
-            raise ValueError(f"Failed to parse search queries JSON in fetch_multiple_google_results: {e}")
-        
-        # search_queries_dict = json.loads(search_queries) 
-        search_queries_dict = analysis
-        articles = []  # Initialize an empty list to store articles
-        for query in search_queries_dict.values():
-            print("Fetching google results for query:", query)
-            articles = self.fetch_google_results(query)
-            if len(articles) > 0:
-                return articles
-        # If no articles found, return an empty list
-        if len(articles) == 0:
-            print("No articles found for any of the search queries in google results.")
-            return []
-
     def fetch_news_articles(self, search_query: str) -> List[Dict]:
         """Fetch news articles related to the prediction, with up to 5 retries."""
 
@@ -671,8 +710,16 @@ Ensure the response is **valid JSON** with no additional text."""
 
     def analyze_verification(self, prediction_query: str, all_sources: List[Dict]) -> Dict:
         """Analyze the sources to determine if the prediction was accurate."""
+
+        # all_sources = [
+        #         {"source": articles[1], "description": articles[0]} 
+        #     ] 
+        
         article_summaries = "\n".join(
-            [f"Title: {src['title']}, Source: {src['source']}, Description: {src['description']}" for src in all_sources]
+            [
+                f"Description: {src['description']}, Sources: {', '.join(src['source'])}"
+                for src in all_sources
+            ]
         )
 
         print("Okay analyze_verification")
@@ -751,16 +798,20 @@ Ensure the response is **valid JSON** with no additional text."""
         # Fetch news articles
         # articles = self.fetch_news_articles(search_query)
         articles = self.fetch_multiple_news_articles(search_queries)
+        print("verify_prediction articles", articles)
+        # return [summary, urls]
         # Fetch Google search results
         # google_results = self.fetch_google_results(search_query)
-        google_results = self.fetch_multiple_google_results(search_queries)
+        # google_results = self.fetch_multiple_google_results(search_queries)
 
         # Prepare sources from both APIs
-        all_sources = [
-            {"title": a['title'], "source": a['link'], "description": a['snippet']} for a in articles
-        ] + [
-            {"title": g['title'], "source": g['link'], "description": g['snippet']} for g in google_results
-        ]
+        all_sources = []
+        
+        if len(articles) > 1:
+            all_sources = [
+                {"source": articles[1], "description": articles[0]} for a in articles
+            ] 
+            print("inside allsources", all_sources)
 
         # all_sources = [
         #     {"title": g['title'], "source": g['link'], "snippet": g['snippet']} for g in google_results
