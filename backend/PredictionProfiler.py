@@ -477,6 +477,13 @@ class PredictionProfiler:
             "profile_summary": profile["analysis"].get("summary", "")
         }
 
+        print("Profile summary:", profile["analysis"].get("summary", ""))
+        print("\n=== Predictions with Results ===")
+        for i, verification in enumerate(verification_stats["verifications"], 1):
+            result = verification['result']
+            prediction = verification['prediction']
+            print(f"{i}. [{result}] {prediction[:100]}{'...' if len(prediction) > 100 else ''}")
+
         # Add category credibility scores to the result
         for category, score in category_credibility_scores.items():
             result[f"{category}_credibility_score"] = round(score, 2)

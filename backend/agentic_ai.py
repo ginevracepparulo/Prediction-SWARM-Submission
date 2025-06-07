@@ -1159,11 +1159,11 @@ class PredictionProfiler:
                 messages=[{"role": "system", "content": system_context},
                         {"role": "user", "content": batch_tweet_list}]
             )
-
+            print("FINALLY GOT A RESPONSE")
             raw_output = response.choices[0].message.content
-
+            print("Raw output:", raw_output)
             raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
-
+            # Step 2: Extract JSON Content (if extra text exists)
             match = re.search(r"\{.*\}", raw_output, re.DOTALL)
             if match:
                 raw_output = match.group(0)  # Extract only the JSON content
@@ -1171,7 +1171,9 @@ class PredictionProfiler:
             try:
                 parsed = json.loads(raw_output.encode().decode('utf-8-sig'))  # Removes BOM if present
                 # Extend the all_predictions list with the batch results
+                print("Parsed:", parsed)
                 all_predictions.extend(list(parsed.values()))
+                print("All predictions:", all_predictions)
 
             except json.JSONDecodeError as e:
                 print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
@@ -1285,17 +1287,27 @@ class PredictionProfiler:
             "profile_summary": profile["analysis"].get("summary", "")
         }
 
+        print(categorization_stats)
+        print("Helllooooo")
+        print("Profile summary:", profile["analysis"].get("summary", ""))
+        print("\n=== Predictions with Results ===")
+        for i, verification in enumerate(verification_stats["verifications"], 1):
+            ver_result = verification['result']
+            prediction = verification['prediction']
+            print(f"{i}. [{ver_result}] {prediction}")
+
         # Add category credibility scores to the result
         for category, score in category_credibility_scores.items():
             result[f"{category}_credibility_score"] = round(score, 2)
             result[f"{category}_prediction_stats"] = categorization_stats[category]
-        print("BEST CREDIBILITY SCORE:", result)
+        
         return result
 
     async def calculate_credibility_scores_batch(self, handles: List[str], prediction_verifier: PredictionVerifier) -> List[Dict]:
         """Calculate credibility scores for multiple users concurrently."""
         tasks = [self.calculate_credibility_score(handle, prediction_verifier) for handle in handles]
         return await asyncio.gather(*tasks)
+
 
 # ============ AUTOGEN INTEGRATION ============
 # Register the functions with the agents

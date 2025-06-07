@@ -207,9 +207,9 @@ Ensure the response is **valid JSON** with no additional text."""
         # print("Completion generate polymarket topic", completion.choices[0].message.content)
 
         return completion.choices[0].message.content.strip()
-
+    """
     def fetch_multiple_news_articles(self, search_queries) -> List[Dict]:
-        """Fetch news articles related to the prediction."""
+        # Fetch news articles related to the prediction.
         print("Fetching news articles...")
         raw_output = search_queries
         raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
@@ -230,6 +230,7 @@ Ensure the response is **valid JSON** with no additional text."""
         # search_queries_dict = json.loads(search_queries) 
         search_queries_dict = analysis
         urls = []  # Initialize an empty list to store articles
+        links = []  # Initialize an empty list to store links
         for query in search_queries_dict.values():
             print(f"Fetching news articles for query: {query}")
             summary, links = self.fetch_web_search_results(query)
@@ -238,9 +239,66 @@ Ensure the response is **valid JSON** with no additional text."""
                     urls.append(annotation.url_citation.url)
                 print("This is the annotation list fetch_multiple_news_articles",[summary, urls])
                 return [summary, urls]
+        print("Links", links)
         # If no articles found, return an empty list
         if len(links) == 0:
             print("No articles found for any of the search queries in news articles.")
+            return []
+    """
+
+    def fetch_multiple_news_articles(self, search_queries) -> List[Dict]:
+        """Fetch news articles related to the prediction."""
+        print("Fetching news articles...")
+        
+        # Initialize variables at the start
+        urls = []
+        links = []  # Always initialize links
+        
+        try:
+            raw_output = search_queries
+            raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+            
+            # Extract JSON from response
+            match = re.search(r"\{(.*)\}", raw_output, re.DOTALL)
+            if match:
+                raw_output = match.group(0)
+            else:
+                print("No match found in fetch_multiple_news_articles")
+                print("raw_output fetch_multiple_news_articles::", raw_output)
+                return []        
+            
+            try:
+                analysis = json.loads(raw_output)
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse search queries JSON in fetch_multiple_news_articles: {e}")
+                return []
+            
+            search_queries_dict = analysis
+            
+            for query in search_queries_dict.values():
+                print(f"Fetching news articles for query: {query}")
+                try:
+                    result = self.fetch_web_search_results(query)
+                    if result and len(result) >= 2:
+                        summary, current_links = result[0], result[1]
+                        links = current_links  # Update links safely
+                        
+                        if len(links) > 0:
+                            for annotation in links:
+                                if hasattr(annotation, 'url_citation') and hasattr(annotation.url_citation, 'url'):
+                                    urls.append(annotation.url_citation.url)
+                            print("This is the annotation list fetch_multiple_news_articles", [summary, urls])
+                            return [summary, urls]
+                except Exception as e:
+                    print(f"Error fetching results for query '{query}': {e}")
+                    continue  # Continue to next query
+            
+            # If we get here, no articles were found
+            print("No articles found for any of the search queries in news articles.")
+            return []
+            
+        except Exception as e:
+            print(f"Error in fetch_multiple_news_articles: {e}")
             return []
 
     # def fetch_multiple_google_results(self, search_queries) -> List[Dict]:
