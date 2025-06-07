@@ -146,8 +146,8 @@ class PredictionProfiler:
             - "Trump will win in 2024" → **Yes (Explicit)**
             - "Senator proposes bill to ban TikTok" → **Yes (Implicit)**
             - "Nikki Haley is gaining ground in Iowa polls." → **Yes (Implicit)** (implies prediction market relevance)
-            - "Senate to vote on crypto regulation bill next week." → **Yes (Implicit)**
-            - "Will Russia use nuclear weapons in 2024?" → **Yes (Explicit)**
+            - "Senate to vote on crypto regulation bill next week." → **Yes (Implicit)** 
+            - "Will Russia use nuclear weapons in 2024?" → *No** (question, not a prediction)
             - "Israel expected to launch ground invasion of Gaza." → **Yes (Implicit)**
             - "Elon Musk hints at stepping down as Twitter CEO." → **Yes (Implicit)**
             - "The economy is collapsing" → **No** (No actionable prediction)
@@ -302,8 +302,81 @@ class PredictionProfiler:
         return profiles
     """
 
+    async def categorize_predictions(self, tweets: List[str]) -> Dict:
+        """Categorize predictions into their respective categories, processing in batches of 25."""
+
+        # Initialize an empty list to store all prediction results
+        all_predictions = []
+        batch_size = 25
+        
+        # Process tweets in batches of 25
+        for i in range(0, len(tweets), batch_size):
+            batch_tweets = tweets[i:i+batch_size]
+            batch_tweet_list = "\n".join([f"{j+1}. {t}" for j, t in enumerate(batch_tweets)])
+            
+            system_context = """You are an expert in categorizing predictions into specific categories.
+            **Categories:**
+            - Politics (elections, legislation, court rulings, policy changes, etc.)
+            - Crypto (cryptocurrency predictions, market trends, etc.)
+            - Sports (sports events, player trades, etc.)
+            - Business (company moves, market impacts, etc.)
+            - Geopolitics (wars, treaties, sanctions, etc.)
+            - Other (if it doesn't fit any of the above categories)
+
+            **Task:** For each tweet, categorize it into one OR more of the above categories. If a tweet doesn't fit any category, classify it as "Other". Respond *only* with a JSON object like:
+            {
+                "tweet1": ["Politics", "Crypto"],
+                "tweet2": ["Sports"],
+                ...
+
+            }
+
+            **Examples:**
+            - "Trump will win in 2024" → **["Politics"]**
+            - "Senator proposes bill to ban TikTok" → **["Politics"]**
+            - "Nikki Haley is gaining ground in Iowa polls." → **["Politics"]** 
+            - "Senate to vote on crypto regulation bill next week." → **["Geopolitics"]** 
+            - "Israel expected to launch ground invasion of Gaza." → **["Geopolitics"]**
+            - "Elon Musk hints at stepping down as Twitter CEO." → **["Business"]**
+            - "The Lakers will win the championship" → **["Sports"]**
+            - "I predict that the price of Bitcoin will reach $100,000 by the end of 2025." → **["Crypto"]**
+            - "I believe that the 2024 Summer Olympics will be held in Paris." → **["Sports"]**
+            - "I predict that the US will not default on its debt in 2024." → **["Politics"]**
+            """
+            
+            response = await asyncio.to_thread(self.groq_client.chat.completions.create,
+                model=MODEL_NAME1,
+                messages=[{"role": "system", "content": system_context},
+                        {"role": "user", "content": batch_tweet_list}]
+            )
+            print("FINALLY GOT A RESPONSE")
+            raw_output = response.choices[0].message.content
+            print("Raw output:", raw_output)
+            raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+            # Step 2: Extract JSON Content (if extra text exists)
+            match = re.search(r"\{.*\}", raw_output, re.DOTALL)
+            if match:
+                raw_output = match.group(0)  # Extract only the JSON content
+            
+            try:
+                parsed = json.loads(raw_output.encode().decode('utf-8-sig'))  # Removes BOM if present
+                # Extend the all_predictions list with the batch results
+                print("Parsed:", parsed)
+                all_predictions.extend(list(parsed.values()))
+                print("All predictions:", all_predictions)
+
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
+                logging.info(f"Failed to parse LLM response for batch {i//batch_size + 1}")
+                # If parsing fails, add "NA" for each tweet in the batch as a fallback
+                all_predictions.extend(["NA"] * len(batch_tweets))
+        
+        # Return combined results in the expected format
+        return all_predictions
+
     async def calculate_credibility_score(self, handle: str, prediction_verifier: PredictionVerifier) -> Dict:
         """Calculate credibility score asynchronously for a single handle."""
+        print("Inside calculate credibility score")
         # Await the profile retrieval
         profile = await self.get_profile(handle)
 
@@ -325,12 +398,12 @@ class PredictionProfiler:
 
         # Track verification results
         verification_stats = {
-            "total": len(profile["prediction_tweets"]),
+            "total": 0,
             "true": 0,
             "false": 0,
             "uncertain": 0,
-            "verifications": []
         }
+
 
         async def verify_prediction_async(prediction):
             """Run prediction verification in a separate thread (avoids blocking)."""
@@ -341,8 +414,18 @@ class PredictionProfiler:
             *(verify_prediction_async(prediction) for prediction in profile["prediction_tweets"])
         )
 
-        # Process verification results
-        for prediction, verification in zip(profile["prediction_tweets"], verification_results):
+        # Run all categrizations
+        categorization_results = await self.categorize_predictions(profile["prediction_tweets"])
+
+        categories_list = ["Politics", "Crypto", "Sports", "Business", "Geopolitics", "Other"]
+        # Initialize categorization stats
+        categorization_stats = { category: verification_stats for category in categories_list}
+        verification_stats["total"] = len(profile["prediction_tweets"])
+        verification_stats["verifications"] = []
+
+        # Process categorization, verification results
+        for prediction, categorization, verification in zip(profile["prediction_tweets"], categorization_results, verification_results):
+            
             if verification["result"] == "TRUE":
                 verification_stats["true"] += 1
             elif verification["result"] == "FALSE":
@@ -357,17 +440,34 @@ class PredictionProfiler:
                 "sources": verification["sources"]
             })
 
+            for category in categorization:
+                categorization_stats[category]["total"] += 1
+                if verification["result"] == "TRUE":
+                    categorization_stats[category]["true"] += 1
+                elif verification["result"] == "FALSE":
+                    categorization_stats[category]["false"] += 1
+                else:  
+                    categorization_stats[category]["uncertain"] += 1
+
         # Calculate credibility score
         if verification_stats["total"] > 0:
             credibility_score = verification_stats["true"] / verification_stats["total"]
         else:
             credibility_score = 0.0
 
+        # Calculate category credibility scores
+        category_credibility_scores = {}
+        for category, stats in categorization_stats.items():
+            if stats["total"] > 0:
+                category_credibility_scores[category] = stats["true"] / stats["total"]
+            else:
+                category_credibility_scores[category] = 0.0
+
         # Create the final result
         result = {
             "handle": handle,
-            "credibility_score": round(credibility_score, 2),
-            "prediction_stats": {
+            "global_credibility_score": round(credibility_score, 2),
+            "global_prediction_stats": {
                 "total": verification_stats["total"],
                 "true": verification_stats["true"],
                 "false": verification_stats["false"],
@@ -377,6 +477,11 @@ class PredictionProfiler:
             "profile_summary": profile["analysis"].get("summary", "")
         }
 
+        # Add category credibility scores to the result
+        for category, score in category_credibility_scores.items():
+            result[f"{category}_credibility_score"] = round(score, 2)
+            result[f"{category}_prediction_stats"] = categorization_stats[category]
+        
         return result
 
     async def calculate_credibility_scores_batch(self, handles: List[str], prediction_verifier: PredictionVerifier) -> List[Dict]:
