@@ -7,10 +7,6 @@ from autogen_agentchat.messages import ToolCallRequestEvent, ToolCallExecutionEv
 import os 
 import logging
 from dotenv import load_dotenv
-from datetime import datetime, timezone
-import httpx
-import json
-
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
 if not loaded:
@@ -105,17 +101,9 @@ async def run_prediction_analysis(text_messages):
         return response.chat_message.content
 """
 
-async def run_prediction_analysis(text_messages, session_token=None):
-    if session_token is None:
-        raise ValueError("Session token must be provided to run prediction analysis")
-    
+async def run_prediction_analysis(text_messages):
     current_messages = text_messages[:]
     cancellation_token = CancellationToken()
-    latest_message = current_messages[-1] if current_messages else None
-
-    headers = {}
-    if session_token:
-        headers["Authorization"] = f"Bearer {session_token}"
 
     while True:
         try:
@@ -140,23 +128,6 @@ async def run_prediction_analysis(text_messages, session_token=None):
             # logging.info(f"run prediction analysis callback: {progress_manager.get_callback()}")
             # if progress_manager.get_callback():
             #     progress_manager.update_progress(100, "✅ Analysis complete!")
-            prediction_timestamp = datetime.now(timezone.utc).isoformat(timespec='seconds')
-            prediction_payload = {
-                "content": latest_message.content,
-                "prediction_timestamp": prediction_timestamp,
-                "predictor_twitter_username": response.chat_message.content,
-                "topic": latest_message.content,
-                "url": response.chat_message.content
-            }
-
-            async with httpx.AsyncClient() as client:
-                insert_resp = await client.post(
-                    f"http://torus-memory.sagewerk.io/api/predictions/insert",
-                    json=prediction_payload,
-                    headers=headers
-                )
-                insert_resp.raise_for_status()
-                logger.info("Prediction inserted successfully")
 
             # Safe return
             if isinstance(response.chat_message, BaseMessage):

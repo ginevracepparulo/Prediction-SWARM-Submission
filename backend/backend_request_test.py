@@ -30,11 +30,29 @@ verify_resp = requests.post(
     },
     headers={"Content-Type": "application/json"}
 )
+
+print("Verify response: ", verify_resp.json())
 session_token = verify_resp.json().get("session_token")
 
+print("Session token: ", session_token)
 # 4. Use session token for authenticated requests
 headers = {
     "Authorization": f"Bearer {session_token}",
     "Content-Type": "application/json"
 }
 # response = requests.get("YOUR_API_ENDPOINT", headers=headers)
+
+url_insert = "https://memory.sension.torus.directory/api/predictions/insert"
+
+payload = {
+    "content": "Bitcoin will reach $100k by 2026",
+    "prediction_timestamp": "2025-06-20T12:00:00Z",
+    "predictor_twitter_username": "your_twitter",
+    "topic": "crypto",
+    "url": "https://twitter.com/your_twitter/status/123456789"
+}
+
+
+response = requests.post(url_insert, json=payload, headers=headers)
+
+print(response)

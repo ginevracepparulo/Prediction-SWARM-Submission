@@ -60,6 +60,33 @@ client1  = OpenAIChatCompletionClient(
 db = Database()
 # ============ COMPONENT 1: PREDICTION FINDER ============
 
+import json
+from typing import List, Dict, Tuple
+# from utils.progress_bar import progress_manager
+import requests
+import re
+import os
+import asyncio
+from dotenv import load_dotenv
+import requests
+import logging
+import requests
+from substrateinterface import Keypair
+url_wallet = "https://memory.sension.torus.directory/api/auth/challenge"
+WALLET_ADDRESS = "5DetSJZ3mSCk5bpaP98NCAVN8FqU7aB4aqFXtJMc5PFbuUzk"
+WALLET_SEED_PHRASE = "ranch grant sunset body purse elite top furnace develop observe hobby license"  # Replace with your actual seed phrase
+
+dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
+loaded = load_dotenv(dotenv_path=dotenv_path)
+print("loaded app", loaded)
+if not loaded:
+     # Fallback in case it's mounted at root instead
+     load_dotenv() 
+logger = logging.getLogger("app")
+
+# Initialize environment variables
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-2024-08-06")
+
 class PredictionFinder:
     """Finds tweets containing predictions about specified topics."""
     
@@ -308,7 +335,7 @@ Ensure the response is **valid JSON** with no additional text.
         
         return completion.choices[0].message.content
 
-    def filter_tweets_by_prediction(self, yes_no: str, hash_dict: Dict) -> str:
+    def filter_tweets_by_prediction(self, yes_no: str, hash_dict: Dict, poly_topic: str = "") -> str:
         """Filter tweets to only include those with predictions."""
         match_yes_no = re.search(r"\{(.*)\}", yes_no, re.DOTALL)
         json_content_yes_no = "{" + match_yes_no.group(1) + "}"
@@ -316,12 +343,25 @@ Ensure the response is **valid JSON** with no additional text.
         yes_no_dict = json.loads(json_content_yes_no)
         
         filtered_tweets = {
-            tweet_id: details
-            for tweet_id, details in hash_dict.items()
-            if details["username"] in yes_no_dict and yes_no_dict[details["username"]] == "Yes"
+        tweet_id: details
+        for tweet_id, details in hash_dict.items()
+        if details["username"] in yes_no_dict and yes_no_dict[details["username"]] == "Yes"
         }
-        
-        return json.dumps(filtered_tweets, indent=4)
+
+        filtered_tweets_api = {}
+        for tweet_id, details in hash_dict.items():
+            username = details["username"]
+            if username in yes_no_dict and yes_no_dict[username] == "Yes":
+               filtered_tweets_api[tweet_id] = {
+                    "content": details["tweet_text"],
+                    "prediction_timestamp": details["created_at"],
+                    "predictor_twitter_username": username,
+                    "topic": poly_topic,
+                    "url": details["tweet url"],
+                }
+
+        return json.dumps(filtered_tweets, indent=4), json.dumps(filtered_tweets_api, indent=4)
+
     
     async def find_predictionsold(self, user_prompt: str) -> Dict:
         """Main method to find predictions based on user prompt."""
@@ -369,18 +409,89 @@ Ensure the response is **valid JSON** with no additional text.
 
         print(f"Fetched {len(hash_dict)} tweets")
 
+
         # Analyze predictions
         prediction_analysis = self.analyze_predictions(username_to_tweet, poly_topic)
 
         print("Prediction Analysis:", prediction_analysis)
 
-        # Filter tweets
-        filtered_predictions = self.filter_tweets_by_prediction(prediction_analysis, hash_dict)
+        # Filter tweets (pass poly_topic)
+        filtered_predictions, filtered_predictions_api = self.filter_tweets_by_prediction(prediction_analysis, hash_dict, poly_topic)
         
         print("Filtered Predictions:", filtered_predictions)
 
+        challenge_resp = requests.post(
+            "https://memory.sension.torus.directory/api/auth/challenge",
+            json={"wallet_address": WALLET_ADDRESS},
+            headers={"Content-Type": "application/json"}
+        )
+        challenge_data = challenge_resp.json()
+        message = challenge_data["message"]
+        challenge_token = challenge_data["challenge_token"]
+
+        print("Challenge request: ", challenge_resp.json())
+
+        # 2. Sign the message (replace with your wallet's signing method)
+        wallet = Keypair.create_from_mnemonic(WALLET_SEED_PHRASE)
+        signature = wallet.sign(message.encode("utf-8")).hex()
+
+        # 3. Verify signature
+        verify_resp = requests.post(
+            "https://memory.sension.torus.directory/api/auth/verify",
+            json={
+                "challenge_token": challenge_token,
+                "signature": signature
+            },
+            headers={"Content-Type": "application/json"}
+        )
+
+        print("Verify response: ", verify_resp.json())
+        session_token = verify_resp.json().get("session_token")
+
+        print("Session token: ", session_token)
+        # 4. Use session token for authenticated requests
+        headers = {
+            "Authorization": f"Bearer {session_token}",
+            "Content-Type": "application/json"
+        }
+        # response = requests.get("YOUR_API_ENDPOINT", headers=headers)
+
+        # url_insert = "https://memory.sension.torus.directory/api/predictions/insert"
+
+        # payload = {
+        #     "content": "Bitcoin will reach $100k by 2026",
+        #     "prediction_timestamp": "2025-06-20T12:00:00Z",
+        #     "predictor_twitter_username": "your_twitter",
+        #     "topic": "crypto",
+        #     "url": "https://twitter.com/your_twitter/status/123456789"
+        # }
+
+
+        # response = requests.post(url_insert, json=payload, headers=headers)
+
+        # print(response)
+
+        # --- Send each prediction to the API ---
+        url_insert = "https://memory.sension.torus.directory/api/predictions/insert"
+        # You may want to set your session token somewhere accessible
+        # session_token = os.environ.get("SESSION_TOKEN", "")  # Or pass as argument
+        # headers = {
+        #     "Authorization": f"Bearer {session_token}",
+        #     "Content-Type": "application/json"
+        # }
+        filtered_predictions_api_dict = json.loads(filtered_predictions_api)
+        for prediction in filtered_predictions_api_dict.values():
+            try:
+                resp = requests.post(url_insert, json=prediction, headers=headers)
+                print("Sent prediction:", prediction)
+                print("Response:", resp.status_code, resp.text)
+            except Exception as e:
+                print("Error sending prediction:", e)
+        # --- End sending ---
+        
         # Return as dictionary
         return json.loads(filtered_predictions)
+
 
 # ============ COMPONENT 3: PREDICTOR VERIFIER ============
 
@@ -1395,7 +1506,7 @@ if __name__ == "__main__":
     # task = "Find predictions on winners of 2026 FIFA World Cup qualification (AFC)"
     # response = asyncio.run(run_prediction_analysis(task))
 
-    response = asyncio.run(run_prediction_analysis("Give me credibility scores for @elonmusk"))
+    response = asyncio.run(run_prediction_analysis("Give me predictions on Israel x Hamas ceasefire before June 2025?"))
 
     #task = "Verify the prediction: The next pope will be from Africa."
     task = "Verify the prediction: Chile will qualify for the 2026 FIFA World Cup."

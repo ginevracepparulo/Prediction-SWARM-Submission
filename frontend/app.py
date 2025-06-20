@@ -10,8 +10,6 @@ import sys
 import time
 from threading import Thread, Event
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-import httpx
-import json
 
 # --- Configuration ---
 MAX_HISTORY_TURNS = 20 # Keep last 5 pairs (user+assistant) for context
@@ -162,51 +160,9 @@ def progress_thread_func(progress_bar, status_text, stop_event):
             status_text.text("✏️ Finalizing answer...")
         time.sleep(0.3)
 
-API_BASE_URL = "https://example.com/api"  # Replace with your API base URL
-
-def authenticate(wallet_address: str) -> str:
-    """
-    Performs challenge + verify and returns a session token.
-    Caches token in st.session_state.
-    """
-    if "session_token" in st.session_state:
-        return st.session_state.session_token
-
-    with httpx.Client() as client:
-        # 1. Request challenge
-        resp = client.post(f"{API_BASE_URL}/auth/challenge", json={"wallet_address": wallet_address})
-        resp.raise_for_status()
-        challenge_data = resp.json()
-        challenge_token = challenge_data["challenge_token"]
-        message = challenge_data["message"]
-
-        # 2. Sign the message with wallet private key (you need to implement your own signing)
-        # For demo, we just fake a signature:
-        signature = "dummy_signature"  # Replace with actual signing logic
-
-        # 3. Verify challenge
-        verify_resp = client.post(f"{API_BASE_URL}/auth/verify", json={
-            "challenge_token": challenge_token,
-            "signature": signature
-        })
-        verify_resp.raise_for_status()
-        session_token = verify_resp.json()["session_token"]
-
-        st.session_state.session_token = session_token
-        return session_token
-
-
 def agent_thread_func(history, holder):
     try:
-        # Get wallet address however you have it (demo with dummy)
-        wallet_address = "5DetSJZ3mSCk5bpaP98NCAVN8FqU7aB4aqFXtJMc5PFbuUzk"
-        
-        # Authenticate once and get session token
-        session_token = authenticate(wallet_address)
-
-        # Pass session token to your run_prediction_analysis
-        # Assuming you modify run_prediction_analysis to accept session_token
-        response = run_async_function(run_prediction_analysis(history, session_token=session_token))
+        response = run_async_function(run_prediction_analysis(history))
     except Exception as e:
         print("AN EXCEPTION OCCURRED", e)
         response = "Sorry, I encountered an error."
