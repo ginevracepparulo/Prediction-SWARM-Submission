@@ -950,7 +950,6 @@ Ensure the response is **valid JSON** with no additional text."""
         return final_result
     
 # ============ COMPONENT 2: PREDICTOR PROFILE BUILDER ============
-
 class PredictionProfiler:
     def __init__(self, groq_client, datura_api_key, datura_api_url):
         self.groq_client = groq_client
@@ -961,22 +960,25 @@ class PredictionProfiler:
         """Fetch profile from db and if not found, build it."""
         if handle.startswith("@"):
             handle = handle[1:]
-        print(f"Fetching profile for {handle}")
+
+        logger.info(f"Fetching profile for {handle}")
         # Check if the profile exists in the database
         response = db.select_profile(handle)     
-        print(f"Profile found: {response}")
+        logger.info(f"Profile found: {response}")
 
         if response==None:
+            logger.info(f"Profile not found in the database for {handle}")
             print(f"Profile not found in the database for {handle}")
             profile = None
         else: 
             profile = response
+            logger.info(f"Profile found in the database for {handle}: {profile}")
             print(f"Profile found in the database for {handle}: {profile}")
-        
         # If profile is found, return it
         if profile:
             return profile
         
+        logger.info(f"Profile not found in the database for {handle}. Building profile...")
         print(f"Profile not found in the database for {handle}. Building profile...")
         # If not found, build the user profile
         profile = await self.build_profile(handle)
@@ -995,12 +997,7 @@ class PredictionProfiler:
 
     async def build_user_profile(self, handle: str, max_retries: int = 5) -> Dict:
         print(handle)
-
-        if handle.startswith("@"):
-            handle = handle[1:]
-
-        print(handle)
-
+        logger.info(handle)
         if handle.startswith("@"):
             handle = handle[1:]
 
@@ -1022,22 +1019,22 @@ class PredictionProfiler:
                 response.raise_for_status()
                 tweets_ls = response.json()
                 print(len(tweets_ls), "tweets found")
+                logger.info(f"tweets found: {len(tweets_ls)}")
                 if tweets_ls:
                     tweets = [tweet.get("text", "") for tweet in tweets_ls]
                     return {"tweets": tweets}
-                    
                 
             except requests.exceptions.RequestException as e:
                 return {"error": f"Failed to fetch tweets: {str(e)}", "tweets": []}
             
             print(f"Attempt {attempt + 1} failed. Retrying...")
+            logger.info(f"Attempt {attempt + 1} failed. Retrying...")
             await asyncio.sleep(2)
         
         return {"error": "Invalid Username. No tweets found after 5 attempts.", "tweets": []}
 
     async def filter_predictions(self, tweets: List[str]) -> Dict:
         """Filter tweets to only include predictions, processing in batches of 25."""
-    
         # Initialize an empty list to store all prediction results
         all_predictions = []
         batch_size = 25
@@ -1052,9 +1049,6 @@ class PredictionProfiler:
             **Definitions:**
             1. **Explicit Prediction**: A direct statement about a future outcome (e.g., "X will happen," "Y is likely to pass").
             2. **Implicit Prediction**: A statement implying a future outcome (e.g., "Senator proposes bill," "Protests may lead to...").
-            **Definitions:**
-            1. **Explicit Prediction**: A direct statement about a future outcome (e.g., "X will happen," "Y is likely to pass").
-            2. **Implicit Prediction**: A statement implying a future outcome (e.g., "Senator proposes bill," "Protests may lead to...").
 
             **Polymarket Topics Include:**
             - Elections, legislation, court rulings
@@ -1064,19 +1058,7 @@ class PredictionProfiler:
             - Legal/Investigative outcomes (prosecutions, declassifications)
 
             **Important Instruction:** Be *generous* in your classification. If a tweet suggests even a plausible implication of a future event **relevant to Polymarket topics**, classify it as **"Yes"**. It is better to include weak signals than to exclude potentially relevant ones. When in doubt, lean toward **"Yes"**.
-            **Polymarket Topics Include:**
-            - Elections, legislation, court rulings
-            - Policy changes (tariffs, regulations)
-            - Business decisions (company moves, market impacts)
-            - Geopolitical events (wars, treaties, sanctions)
-            - Legal/Investigative outcomes (prosecutions, declassifications)
 
-            **Important Instruction:** Be *generous* in your classification. If a tweet suggests even a plausible implication of a future event **relevant to Polymarket topics**, classify it as **"Yes"**. It is better to include weak signals than to exclude potentially relevant ones. When in doubt, lean toward **"Yes"**.
-
-            **Exclude:**
-            - Past events (unless they imply future consequences)
-            - Pure opinions without any forecastable outcome
-            - Non-actionable statements (e.g., "People are struggling")
             **Exclude:**
             - Past events (unless they imply future consequences)
             - Pure opinions without any forecastable outcome
@@ -1086,8 +1068,8 @@ class PredictionProfiler:
             - "Trump will win in 2024" → **Yes (Explicit)**
             - "Senator proposes bill to ban TikTok" → **Yes (Implicit)**
             - "Nikki Haley is gaining ground in Iowa polls." → **Yes (Implicit)** (implies prediction market relevance)
-            - "Senate to vote on crypto regulation bill next week." → **Yes (Implicit)**
-            - "Will Russia use nuclear weapons in 2024?" → **Yes (Explicit)**
+            - "Senate to vote on crypto regulation bill next week." → **Yes (Implicit)** 
+            - "Will Russia use nuclear weapons in 2024?" → *No** (question, not a prediction)
             - "Israel expected to launch ground invasion of Gaza." → **Yes (Implicit)**
             - "Elon Musk hints at stepping down as Twitter CEO." → **Yes (Implicit)**
             - "The economy is collapsing" → **No** (No actionable prediction)
@@ -1121,7 +1103,7 @@ class PredictionProfiler:
                 all_predictions.extend(parsed.get("predictions", []))
             except json.JSONDecodeError as e:
                 print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
-
+                logging.info(f"Failed to parse LLM response for batch {i//batch_size + 1}")
                 # If parsing fails, add "No" for each tweet in the batch as a fallback
                 all_predictions.extend(["No"] * len(batch_tweets))
         
@@ -1130,12 +1112,14 @@ class PredictionProfiler:
             "predictions": all_predictions,
         }
 
+
     async def apply_filter(self, tweets: List[str], outcomes: Dict) -> List[str]:
         """Apply prediction filter to tweets."""
         outcomes_list = outcomes["predictions"]
         zipped = list(zip(tweets, outcomes_list))
         filtered_tweets = [tweet for tweet, outcome in zipped if outcome == "Yes"]
         print(f"Filtered {len(filtered_tweets)} prediction tweets from {len(tweets)} total tweets.")
+        logger.info(f"Filtered {len(filtered_tweets)} prediction tweets from {len(tweets)} total tweets.")
         return filtered_tweets
     
     async def analyze_prediction_patterns(self, filtered_tweets: List[str]) -> Dict:
@@ -1198,12 +1182,9 @@ class PredictionProfiler:
     async def build_profile(self, handle: str) -> Dict:
         """Main method to build a predictor's profile."""
         # Get user tweets
-
         print("Inside build profile")
-
         user_data = await self.build_user_profile(handle)
-        
-        print("User data:", user_data)
+        print("Got user data")
         if "error" in user_data:
             return {"error": user_data["error"]}
         
@@ -1213,7 +1194,7 @@ class PredictionProfiler:
         # Apply filter
         filtered_predictions = await self.apply_filter(user_data["tweets"], prediction_outcomes)
         print("Filtered predictions build profile:", len(filtered_predictions))
-        
+        logging.info(f"Filtered predictions build profile: {len(filtered_predictions)}")
         # Analyze prediction patterns
         analysis = await self.analyze_prediction_patterns(filtered_predictions)
         
@@ -1243,14 +1224,83 @@ class PredictionProfiler:
         return profiles
     """
 
+    async def categorize_predictions(self, tweets: List[str]) -> Dict:
+        """Categorize predictions into their respective categories, processing in batches of 25."""
+
+        # Initialize an empty list to store all prediction results
+        all_predictions = []
+        batch_size = 25
+        
+        # Process tweets in batches of 25
+        for i in range(0, len(tweets), batch_size):
+            batch_tweets = tweets[i:i+batch_size]
+            batch_tweet_list = "\n".join([f"{j+1}. {t}" for j, t in enumerate(batch_tweets)])
+            
+            system_context = """You are an expert in categorizing predictions into specific categories.
+            **Categories:**
+            - Politics (elections, legislation, court rulings, policy changes, etc.)
+            - Crypto (cryptocurrency predictions, market trends, etc.)
+            - Sports (sports events, player trades, etc.)
+            - Business (company moves, market impacts, etc.)
+            - Geopolitics (wars, treaties, sanctions, etc.)
+            - Other (if it doesn't fit any of the above categories)
+
+            **Task:** For each tweet, categorize it into one OR more of the above categories. If a tweet doesn't fit any category, classify it as "Other". Respond *only* with a JSON object like:
+            {
+                "tweet1": ["Politics", "Crypto"],
+                "tweet2": ["Sports"],
+                ...
+
+            }
+
+            **Examples:**
+            - "Trump will win in 2024" → **["Politics"]**
+            - "Senator proposes bill to ban TikTok" → **["Politics"]**
+            - "Nikki Haley is gaining ground in Iowa polls." → **["Politics"]** 
+            - "Senate to vote on crypto regulation bill next week." → **["Geopolitics"]** 
+            - "Israel expected to launch ground invasion of Gaza." → **["Geopolitics"]**
+            - "Elon Musk hints at stepping down as Twitter CEO." → **["Business"]**
+            - "The Lakers will win the championship" → **["Sports"]**
+            - "I predict that the price of Bitcoin will reach $100,000 by the end of 2025." → **["Crypto"]**
+            - "I believe that the 2024 Summer Olympics will be held in Paris." → **["Sports"]**
+            - "I predict that the US will not default on its debt in 2024." → **["Politics"]**
+            """
+            
+            response = await asyncio.to_thread(self.groq_client.chat.completions.create,
+                model=MODEL_NAME1,
+                messages=[{"role": "system", "content": system_context},
+                        {"role": "user", "content": batch_tweet_list}]
+            )
+
+            raw_output = response.choices[0].message.content
+
+            raw_output = re.sub(r"^```(json)?|```$", "", raw_output).strip()
+
+            match = re.search(r"\{.*\}", raw_output, re.DOTALL)
+            if match:
+                raw_output = match.group(0)  # Extract only the JSON content
+            
+            try:
+                parsed = json.loads(raw_output.encode().decode('utf-8-sig'))  # Removes BOM if present
+                # Extend the all_predictions list with the batch results
+                all_predictions.extend(list(parsed.values()))
+
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse LLM response for batch {i//batch_size + 1}:")
+                logging.info(f"Failed to parse LLM response for batch {i//batch_size + 1}")
+                # If parsing fails, add "NA" for each tweet in the batch as a fallback
+                all_predictions.extend(["NA"] * len(batch_tweets))
+        
+        # Return combined results in the expected format
+        return all_predictions
+
     async def calculate_credibility_score(self, handle: str, prediction_verifier: PredictionVerifier) -> Dict:
         """Calculate credibility score asynchronously for a single handle."""
+        print("Inside calculate credibility score")
         # Await the profile retrieval
         profile = await self.get_profile(handle)
 
         if "error" in profile:
-            print("This sucks")
-            print("Error in profile:", profile["error"])
             return {"error": profile["error"]}
 
         if not profile["prediction_tweets"]:
@@ -1268,12 +1318,12 @@ class PredictionProfiler:
 
         # Track verification results
         verification_stats = {
-            "total": len(profile["prediction_tweets"]),
+            "total": 0,
             "true": 0,
             "false": 0,
             "uncertain": 0,
-            "verifications": []
         }
+
 
         async def verify_prediction_async(prediction):
             """Run prediction verification in a separate thread (avoids blocking)."""
@@ -1284,8 +1334,18 @@ class PredictionProfiler:
             *(verify_prediction_async(prediction) for prediction in profile["prediction_tweets"])
         )
 
-        # Process verification results
-        for prediction, verification in zip(profile["prediction_tweets"], verification_results):
+        # Run all categrizations
+        categorization_results = await self.categorize_predictions(profile["prediction_tweets"])
+
+        categories_list = ["Politics", "Crypto", "Sports", "Business", "Geopolitics", "Other"]
+        # Initialize categorization stats
+        categorization_stats = { category: verification_stats for category in categories_list}
+        verification_stats["total"] = len(profile["prediction_tweets"])
+        verification_stats["verifications"] = []
+
+        # Process categorization, verification results
+        for prediction, categorization, verification in zip(profile["prediction_tweets"], categorization_results, verification_results):
+            
             if verification["result"] == "TRUE":
                 verification_stats["true"] += 1
             elif verification["result"] == "FALSE":
@@ -1300,17 +1360,34 @@ class PredictionProfiler:
                 "sources": verification["sources"]
             })
 
+            for category in categorization:
+                categorization_stats[category]["total"] += 1
+                if verification["result"] == "TRUE":
+                    categorization_stats[category]["true"] += 1
+                elif verification["result"] == "FALSE":
+                    categorization_stats[category]["false"] += 1
+                else:  
+                    categorization_stats[category]["uncertain"] += 1
+
         # Calculate credibility score
         if verification_stats["total"] > 0:
             credibility_score = verification_stats["true"] / verification_stats["total"]
         else:
             credibility_score = 0.0
 
+        # Calculate category credibility scores
+        category_credibility_scores = {}
+        for category, stats in categorization_stats.items():
+            if stats["total"] > 0:
+                category_credibility_scores[category] = stats["true"] / stats["total"]
+            else:
+                category_credibility_scores[category] = 0.0
+
         # Create the final result
         result = {
             "handle": handle,
-            "credibility_score": round(credibility_score, 2),
-            "prediction_stats": {
+            "global_credibility_score": round(credibility_score, 2),
+            "global_prediction_stats": {
                 "total": verification_stats["total"],
                 "true": verification_stats["true"],
                 "false": verification_stats["false"],
@@ -1320,6 +1397,11 @@ class PredictionProfiler:
             "profile_summary": profile["analysis"].get("summary", "")
         }
 
+        # Add category credibility scores to the result
+        for category, score in category_credibility_scores.items():
+            result[f"{category}_credibility_score"] = round(score, 2)
+            result[f"{category}_prediction_stats"] = categorization_stats[category]
+        print("BEST CREDIBILITY SCORE:", result)
         return result
 
     async def calculate_credibility_scores_batch(self, handles: List[str], prediction_verifier: PredictionVerifier) -> List[Dict]:
@@ -1510,7 +1592,7 @@ if __name__ == "__main__":
     response = asyncio.run(run_prediction_analysis("Give me predictions on Israel x Hamas ceasefire before June 2025?"))
 
     #task = "Verify the prediction: The next pope will be from Africa."
-    task = "Verify the prediction: Chile will qualify for the 2026 FIFA World Cup."
+    #task = "Verify the prediction: Chile will qualify for the 2026 FIFA World Cup."
     # response = asyncio.run(run_prediction_analysis(task))
 
     print("Response from prediction analysis:")
