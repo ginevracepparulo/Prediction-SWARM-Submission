@@ -45,8 +45,8 @@ OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
 
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-2024-08-06")
 MODEL_NAME1 = os.getenv("MODEL_NAME", "gpt-4o-mini-2024-07-18")
-DATURA_API_URL2 = "https://apis.datura.ai/desearch/ai/search/links/twitter"
-DATURA_API_URL1 = "https://apis.datura.ai/twitter/post/user"
+DATURA_API_URL2 = "https://api.desearch.ai/desearch/ai/search/links/twitter"
+DATURA_API_URL1 = "https://api.desearch.ai/twitter"
 client = OpenAI(
     base_url="https://api.openai.com/v1",
     api_key=OPEN_AI_KEY,
@@ -165,7 +165,7 @@ class PredictionFinder:
 
         payload = {
             "prompt": user_prompt,
-            "model": "HORIZON",
+            "model": "NOVA",
             "start_date": "2024-04-10",
             "lang": "en",
             "verified": False,
@@ -180,8 +180,9 @@ class PredictionFinder:
         }
         
         headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
             "Authorization": self.datura_api_key,
-            "Content-Type": "application/json"
         }
         
         for attempt in range(max_retries):
@@ -359,7 +360,7 @@ Ensure the response is **valid JSON** with no additional text.
                     "topic": poly_topic,
                     "url": details["tweet url"],
                 }
-
+        print(f"Filtered {len(filtered_tweets_api)} tweets with predictions related to the topic '{poly_topic}'")
         return json.dumps(filtered_tweets, indent=4), json.dumps(filtered_tweets_api, indent=4)
 
     
@@ -1017,7 +1018,7 @@ class PredictionProfiler:
         
         for attempt in range(max_retries):
             try:
-                response = await asyncio.to_thread(requests.get, "https://apis.datura.ai/twitter/post/user", params=params, headers=headers)
+                response = await asyncio.to_thread(requests.get, "https://api.desearch.ai/twitter", params=params, headers=headers)
                 response.raise_for_status()
                 tweets_ls = response.json()
                 print(len(tweets_ls), "tweets found")
