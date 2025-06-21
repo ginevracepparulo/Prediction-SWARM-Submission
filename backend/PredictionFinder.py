@@ -103,7 +103,7 @@ class PredictionFinder:
 
         payload = {
             "prompt": user_prompt,
-            "model": "HORIZON",
+            "model": "NOVA",
             "start_date": "2024-04-10",
             "lang": "en",
             "verified": False,
@@ -118,14 +118,15 @@ class PredictionFinder:
         }
         
         headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
             "Authorization": self.datura_api_key,
-            "Content-Type": "application/json"
         }
         
         for attempt in range(max_retries):
             try:
                 #print(f"🔁 Attempt {attempt + 1} to fetch tweets...")
-                response = await asyncio.to_thread(requests.post, url=self.datura_api_url, json=payload, headers=headers)
+                response = await asyncio.to_thread(requests.post, url="https://api.desearch.ai/desearch/ai/search/links/twitter", json=payload, headers=headers)
                 response.raise_for_status()
                 data = response.json()
                 tweets_ls = data.get("miner_tweets", [])
