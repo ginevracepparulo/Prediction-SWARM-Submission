@@ -73,8 +73,8 @@ import logging
 import requests
 from substrateinterface import Keypair
 url_wallet = "https://memory.sension.torus.directory/api/auth/challenge"
-WALLET_ADDRESS = "5DetSJZ3mSCk5bpaP98NCAVN8FqU7aB4aqFXtJMc5PFbuUzk"
-WALLET_SEED_PHRASE = "ranch grant sunset body purse elite top furnace develop observe hobby license"  # Replace with your actual seed phrase
+WALLET_ADDRESS = os.environ.get("WALLET_ADDRESS")
+WALLET_SEED_PHRASE = os.environ.get("WALLET_SEED_PHRASE")  # Replace with your actual seed phrase
 
 dotenv_path = "C:\Amit_Laptop_backup\Imperial_essentials\AI Society\Hackathon Torus\.env"
 loaded = load_dotenv(dotenv_path=dotenv_path)
